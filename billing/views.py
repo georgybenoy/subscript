@@ -12,11 +12,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
 from accounts.permissions import staff_or_admin_required
-from .models import Invoice
+from .models import Invoice, InvoiceStatus
 from .services import (
     scope_invoices_for_user,
     get_invoice_for_user_or_404,
@@ -113,3 +113,30 @@ def cancel_invoice_view(request: HttpRequest, pk: int) -> HttpResponse:
     except ValidationError as e:
         messages.error(request, str(e.message if hasattr(e, "message") else e))
     return redirect("billing:invoice_detail", pk=pk)
+
+
+@login_required
+def invoice_pdf_view(request: HttpRequest, pk: int) -> HttpResponse:
+    """
+    Renders and streams PDF invoice statement.
+    Protected by tenant scoping (customers only access their own, staff/admin access all).
+    Only permitted for CONFIRMED or PAID invoices.
+    Refuses DRAFT and CANCELLED with clear error (HttpResponseBadRequest).
+    """
+    invoice = get_invoice_for_user_or_404(request.user, pk)
+    if invoice.status in [InvoiceStatus.DRAFT, InvoiceStatus.CANCELLED]:
+        return HttpResponseBadRequest(
+            f"PDF statement generation is not allowed for {invoice.status} invoices. "
+            "Only CONFIRMED and PAID invoices may be downloaded."
+        )
+
+    try:
+        from .pdf import generate_invoice_pdf
+        pdf_bytes = generate_invoice_pdf(invoice)
+    except ValidationError as e:
+        return HttpResponseBadRequest(str(e.message if hasattr(e, "message") else e))
+
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    filename = f"Invoice-{invoice.invoice_number}.pdf"
+    response["Content-Disposition"] = f'inline; filename="{filename}"'
+    return response
