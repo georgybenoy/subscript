@@ -1,0 +1,27 @@
+{# Reusable KPI Card. Usage: {% include 'partials/_kpi_card.html' with title="Total Customers" value=customer_count trend="+12% from last month" trend_type="positive" icon="bi-people" %} #}
+<div class="card-kpi">
+    <div class="kpi-title">
+        <span>{{ title }}</span>
+        <div class="kpi-icon-wrap">
+            <i class="bi {{ icon|default:'bi-graph-up' }}"></i>
+        </div>
+    </div>
+    <div class="kpi-value">{{ value|default:"--" }}</div>
+    {% if trend %}
+        <div class="kpi-trend {{ trend_type|default:'positive' }}">
+            {% if trend_type == 'positive' %}
+                <i class="bi bi-arrow-up-right"></i>
+            {% elif trend_type == 'negative' %}
+                <i class="bi bi-arrow-down-right"></i>
+            {% else %}
+                <i class="bi bi-dash"></i>
+            {% endif %}
+            <span>{{ trend }}</span>
+        </div>
+    {% else %}
+        <div class="kpi-trend neutral">
+            <i class="bi bi-dot"></i>
+            <span>Real-time metric</span>
+        </div>
+    {% endif %}
+</div>

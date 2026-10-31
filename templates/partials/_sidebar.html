@@ -1,0 +1,147 @@
+{% load static %}
+<aside class="app-sidebar" id="appSidebar">
+    <!-- Brand / Logo Header -->
+    <div class="sidebar-header">
+        <a href="{% url 'dashboard' %}" class="brand-logo text-decoration-none">
+            <span class="brand-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+            </span>
+            <span>Subscript</span>
+        </a>
+    </div>
+
+    <!-- Navigation List -->
+    <div class="sidebar-content">
+        <!-- Main Core -->
+        <div class="nav-section-title">Core Platform</div>
+        <ul class="sidebar-nav">
+            <li class="nav-item">
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>Overview</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="{% url 'customers:list' %}" class="nav-link {% if 'customers' in request.path %}active{% endif %}">
+                    <i class="bi bi-people"></i>
+                    <span>Customers</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Subscriptions & Catalog -->
+        <div class="nav-section-title">Subscriptions & Catalog</div>
+        <ul class="sidebar-nav">
+            <li class="nav-item">
+                <a href="/subscriptions/" class="nav-link {% if 'subscriptions' in request.path %}active{% endif %}">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span>Subscriptions</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/products/" class="nav-link {% if 'products' in request.path and 'plan' not in request.path %}active{% endif %}">
+                    <i class="bi bi-box-seam"></i>
+                    <span>Products</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/products/plans/" class="nav-link {% if 'plan' in request.path %}active{% endif %}">
+                    <i class="bi bi-tag"></i>
+                    <span>Plans</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/subscriptions/quotes/" class="nav-link {% if 'quote' in request.path %}active{% endif %}">
+                    <i class="bi bi-file-earmark-text"></i>
+                    <span>Quotations</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/discounts/" class="nav-link {% if 'discounts' in request.path %}active{% endif %}">
+                    <i class="bi bi-percent"></i>
+                    <span>Discounts</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Finance & Billing -->
+        <div class="nav-section-title">Finance & Billing</div>
+        <ul class="sidebar-nav">
+            <li class="nav-item">
+                <a href="/billing/" class="nav-link {% if 'billing' in request.path or 'invoices' in request.path %}active{% endif %}">
+                    <i class="bi bi-receipt"></i>
+                    <span>Invoices</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/payments/" class="nav-link {% if 'payments' in request.path %}active{% endif %}">
+                    <i class="bi bi-credit-card"></i>
+                    <span>Payments</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a href="/analytics/" class="nav-link {% if 'analytics' in request.path %}active{% endif %}">
+                    <i class="bi bi-bar-chart"></i>
+                    <span>Analytics</span>
+                </a>
+            </li>
+        </ul>
+
+        <!-- Administration -->
+        {% if request.user.is_admin_role %}
+            <div class="nav-section-title">Administration</div>
+            <ul class="sidebar-nav">
+                <li class="nav-item">
+                    <a href="{% url 'accounts:user_list' %}" class="nav-link {% if 'accounts/users' in request.path %}active{% endif %}">
+                        <i class="bi bi-shield-lock"></i>
+                        <span>User Management</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{% url 'accounts:staff_create' %}" class="nav-link {% if 'staff/create' in request.path %}active{% endif %}">
+                        <i class="bi bi-person-plus"></i>
+                        <span>Add Staff</span>
+                    </a>
+                </li>
+            </ul>
+        {% endif %}
+    </div>
+
+    <!-- User Profile Footer -->
+    <div class="sidebar-footer">
+        {% if request.user.is_authenticated %}
+            <div class="dropdown">
+                <div class="user-profile-badge cursor-pointer" data-bs-toggle="dropdown" aria-expanded="false" style="cursor: pointer;">
+                    <div class="user-avatar">
+                        {{ request.user.email|first|upper }}
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="text-truncate fw-semibold text-light small">{{ request.user.email }}</div>
+                        <span class="badge bg-dark border text-muted small" style="font-size: 0.68rem;">{{ request.user.get_role_display|default:request.user.role }}</span>
+                    </div>
+                    <i class="bi bi-three-dots-vertical text-muted"></i>
+                </div>
+                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg" style="background-color: var(--bg-surface-elevated); border-color: var(--border-color);">
+                    <li><a class="dropdown-item py-2" href="{% url 'accounts:profile' %}"><i class="bi bi-person me-2 text-primary"></i> Profile Settings</a></li>
+                    <li><a class="dropdown-item py-2" href="{% url 'accounts:password_change' %}"><i class="bi bi-key me-2 text-muted"></i> Change Password</a></li>
+                    <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                    <li>
+                        <form action="{% url 'accounts:logout' %}" method="post" class="px-2 py-1">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-subscript-danger btn-sm w-100 justify-content-center">
+                                <i class="bi bi-box-arrow-right"></i> Sign Out
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        {% else %}
+            <a href="{% url 'accounts:login' %}" class="btn btn-subscript-primary w-100 justify-content-center">
+                <i class="bi bi-box-arrow-in-right"></i> Sign In
+            </a>
+        {% endif %}
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>

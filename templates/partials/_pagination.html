@@ -1,0 +1,46 @@
+{# Reusable Pagination Component. Usage: {% include 'partials/_pagination.html' with page_obj=page_obj container_id="#table-container" %} #}
+{% if page_obj.has_other_pages %}
+    <div class="card-footer d-flex flex-column flex-sm-row justify-content-between align-items-center py-3 gap-2">
+        <div class="text-muted small">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} items
+        </div>
+        <nav aria-label="Table navigation">
+            <ul class="pagination pagination-subscript mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}"
+                           {% if container_id %}hx-get="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="{{ container_id }}" hx-push-url="true"{% endif %}>
+                           <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}"
+                               {% if container_id %}hx-get="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="{{ container_id }}" hx-push-url="true"{% endif %}>
+                               {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}"
+                           {% if container_id %}hx-get="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="{{ container_id }}" hx-push-url="true"{% endif %}>
+                           <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+{% endif %}

@@ -1,0 +1,13 @@
+{# Reusable Empty State. Usage: {% include 'partials/_empty_state.html' with title="No Subscriptions Found" message="Create your first subscription to begin recurring billing." action_url="/subscriptions/create/" action_text="Create Subscription" icon="bi-arrow-repeat" %} #}
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <i class="bi {{ icon|default:'bi-inbox' }}"></i>
+    </div>
+    <div class="empty-state-title">{{ title|default:"No records found" }}</div>
+    <div class="empty-state-desc">{{ message|default:"There is currently no data matching your criteria in the system." }}</div>
+    {% if action_url and action_text %}
+        <a href="{{ action_url }}" class="btn btn-subscript-primary">
+            <i class="bi bi-plus-lg"></i> {{ action_text }}
+        </a>
+    {% endif %}
+</div>

@@ -1,0 +1,16 @@
+{# Reusable Status Badge Component. Usage: {% include 'partials/_badge.html' with status=item.status %} #}
+{% with s=status|lower %}
+    {% if s == 'active' or s == 'paid' or s == 'confirmed' or s == 'success' %}
+        <span class="badge-status badge-active">{{ status|title }}</span>
+    {% elif s == 'draft' or s == 'pending' %}
+        <span class="badge-status badge-draft">{{ status|title }}</span>
+    {% elif s == 'quotation' or s == 'trialing' %}
+        <span class="badge-status badge-quotation">{{ status|title }}</span>
+    {% elif s == 'paused' or s == 'past_due' %}
+        <span class="badge-status badge-paused">{{ status|title }}</span>
+    {% elif s == 'closed' or s == 'cancelled' or s == 'overdue' or s == 'void' or s == 'failed' or s == 'uncollectible' %}
+        <span class="badge-status badge-closed">{{ status|title }}</span>
+    {% else %}
+        <span class="badge-status badge-draft">{{ status|default:"Unknown" }}</span>
+    {% endif %}
+{% endwith %}
