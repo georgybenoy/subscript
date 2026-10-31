@@ -12,6 +12,7 @@ Subscript is a robust, modular Django monolith platform engineered for recurring
 - **Backend Framework**: Python 3.11+, Django 5.2, Django ORM, SQLite
 - **Frontend & UI**: Django Templates, Bootstrap 5.3, HTMX, Chart.js 4.4
 - **Reporting & Document Generation**: ReportLab (PDF invoice generation), Pillow
+- **End-to-End Testing & Verification**: Playwright (Headless Google Chrome automation)
 - **Configuration & Secrets**: `python-dotenv` (`.env` configuration)
 - **Strict Architectural Constraints**:
   - Modular Django monolith with thin views and explicit service layers (`services.py`).
@@ -27,12 +28,12 @@ Subscript is structured as a clean modular monolith where each application repre
 
 | App / Domain | Owning Member | Responsibilities & Scope |
 | :--- | :--- | :--- |
-| `config/` | **Backend Lead** | Root URL routing, shared settings, security middleware, environment configuration, role-aware dashboard. |
+| `config/` | **Backend Lead** | Root URL routing, shared settings, security middleware, environment configuration, role-aware dashboard, `/favicon.ico` handler. |
 | `accounts/` | **Backend Lead** | Custom email-based User model, RBAC authorization (`ADMIN`, `STAFF`, `CUSTOMER`), password reset, rate-limited login. |
 | `customers/` | **Backend Lead** | Customer registry, business profiles, HTMX live search, IDOR defense, and `scope_queryset_for_user` helper. |
-| `products/` | **Member 3** | Product catalog (`Product`), add-on SKUs (`ProductVariant`), recurring billing plans (`Plan`). |
-| `subscriptions/`| **Member 3** | Subscription lifecycle, billing intervals, plan attachments, line items. |
-| `discounts/` | **Member 3** | Promotional coupons, percentage & fixed discounts, redemption tracking. |
+| `products/` | **Member 3 (Lead override)** | Product catalog (`Product`), add-on SKUs (`ProductVariant`), recurring billing plans (`Plan`). |
+| `subscriptions/`| **Member 3 (Lead override)** | Subscription lifecycle, billing intervals, plan attachments, line items. |
+| `discounts/` | **Member 3 (Lead override)** | Promotional coupons, percentage & fixed discounts, redemption tracking. |
 | `billing/` | **Member 4** | Invoicing (`Invoice`, `InvoiceItem`), PDF invoice generation via ReportLab, tax calculation. |
 | `payments/` | **Member 4** | Payment ledger (`Payment`), immutable transaction records, payment methods. |
 | `analytics/` | **Member 4** | SaaS intelligence (MRR, ARR, collections, overdue balances, Chart.js visualizations). |
@@ -40,7 +41,7 @@ Subscript is structured as a clean modular monolith where each application repre
 
 ---
 
-## 🚀 Key Features Implemented (Phases 1–5)
+## 🚀 Key Features Implemented (Phases 1–5B & Production Polish)
 
 ### 1. Custom Identity & Authentication (`accounts/`)
 - **Email as Primary Key**: Custom user model using email for login (`USERNAME_FIELD = "email"`).
@@ -61,7 +62,7 @@ Subscript is structured as a clean modular monolith where each application repre
 
 ### 4. Role-Aware Executive Dashboard & Customer Billing Portal (`config/views.py`)
 - **Executive View (Admin & Staff)**: Displays top-line SaaS metrics including total customer count, active subscriptions, MRR/ARR estimates, outstanding payments, and overdue invoice alerts alongside revenue momentum charts.
-- **Customer Portal View (Customer)**: Personalized self-service portal displaying active subscriptions, renewal dates, outstanding balances, and recent billing statements.
+- **Customer Portal View (Customer)**: Personalized self-service portal greeting (`Welcome, AlphaWorks Global`) displaying active subscriptions, renewal dates, outstanding balances, and recent billing statements.
 - **Defensive Lazy Evaluation**: Safely queries cross-app models with graceful empty-state fallbacks and warning logs if optional domain tables are unpopulated.
 
 ### 5. Multi-Tab Customer Profile Integration
@@ -83,6 +84,14 @@ Subscript is structured as a clean modular monolith where each application repre
 - **Full Lifecycle State Engine**: Draft, Quotation, Confirmed, Active, Paused, Cancelled, Expired, and Closed.
 - **Accurate Date Progression**: Safely advances calendar months with leap year and month-end pinning (e.g. Jan 31 -> Feb 28).
 - **Billing Due Lookups**: Optimally indexes and queries active agreements due for automated recurring invoicing.
+
+### 9. PDF Invoicing & Financial Statements (`billing/`)
+- **ReportLab PDF Generator**: Generates formatted, downloadable PDF statements with itemized lines, taxes, and payment history.
+- **Integrity Guards**: Strictly allows PDF export for `CONFIRMED` and `PAID` invoices; safely returns 400 Bad Request for unconfirmed drafts.
+
+### 10. Production UI & Responsive Mobile Alignment
+- **Zero Horizontal Overflow**: Fully responsive layout tested on 375px mobile viewport (iPhone) with zero horizontal overflow (`scrollWidth: 375px == clientWidth: 375px`).
+- **Favicon Integration**: Standard inline SVG favicon in `base.html` and dedicated `/favicon.ico` endpoint in `config/urls.py` eliminating 404 console errors.
 
 ---
 
@@ -168,27 +177,42 @@ Visit `http://127.0.0.1:8000/` in your browser.
 
 ## 🧪 Running Automated Tests
 
-Run the full automated test suite (all 58 tests passing):
+### 1. Full Django Unit & Integration Test Suite (168 tests, 100% passing)
 ```powershell
-python manage.py test tests.test_phase1 tests.test_phase4 tests.test_permissions_matrix accounts customers
+python manage.py test --verbosity=1
 ```
 
-Run specific test modules:
+### 2. Specific Test Domains
 ```powershell
-# RBAC Permissions Matrix & IDOR Audit
+# RBAC Permissions Matrix & Tenant Scoping
 python manage.py test tests.test_permissions_matrix
 
-# Authentication, Password Complexity & Rate-Limiting
+# Authentication, Identity & Lockout Throttling
 python manage.py test accounts
 
-# Customer CRM, Search Filters & Scoping
+# Customer Registry & Search
 python manage.py test customers
 
-# Phase 1 & 4 Foundations & Security Hardening
-python manage.py test tests.test_phase1 tests.test_phase4
+# Products, Plans & Catalog
+python manage.py test products
+
+# Subscriptions Lifecycle & Date Transitions
+python manage.py test subscriptions
+
+# Discounts & Promotional Engine
+python manage.py test discounts
+
+# Billing, Invoicing & PDF Generation
+python manage.py test billing
+
+# Payments & Immutable Ledger
+python manage.py test payments
+
+# Financial Analytics & Reporting
+python manage.py test analytics
 ```
 
-Run Django system and deployment checks:
+### 3. Django System and Deployment Checks
 ```powershell
 python manage.py check
 python manage.py check --deploy
@@ -199,6 +223,6 @@ python manage.py check --deploy
 ## 📚 Technical Documentation & Integration Contracts
 
 Detailed architectural specifications and cross-team contracts are located in the `docs/` directory:
-- [**Database Schema Contract (`docs/DATABASE.md`)**](docs/DATABASE.md): Specifications for all 11 shared models, `DecimalField(12, 2)` monetary requirements, string FK conventions, and ASCII domain relationships.
+- [**Database Schema Contract (`docs/DATABASE.md`)**](docs/DATABASE.md): Specifications for all 11 shared models, `DecimalField(12, 2)` monetary requirements, string FK conventions, and domain relationships.
 - [**Architecture & Developer Guide (`docs/ARCHITECTURE.md`)**](docs/ARCHITECTURE.md): Service layer design patterns, complete 80-route URL resolution map, RBAC matrix, and `scope_queryset_for_user` integration examples.
 - [**Team Workflow & Git Protocols (`docs/WORKFLOW.md`)**](docs/WORKFLOW.md): Branching conventions, semantic commit standards, migration order rules, and pull request procedures.
