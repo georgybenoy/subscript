@@ -134,10 +134,12 @@ class Plan(models.Model):
     product = models.ForeignKey(
         "products.Product",
         on_delete=models.CASCADE,
+        null=True,
+        blank=True,
         related_name="plans",
     )
     name = models.CharField(max_length=255)
-    code = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=100, unique=True, blank=True)
     billing_interval = models.CharField(
         max_length=20,
         choices=BillingInterval.choices,
@@ -198,16 +200,17 @@ class Plan(models.Model):
             self.currency = self.currency.strip().upper()
 
     def save(self, *args, **kwargs):
-        if self.code:
+        if not self.code:
+            import uuid
+            self.code = f"PLAN-{uuid.uuid4().hex[:8].upper()}"
+        else:
             self.code = self.code.strip().upper()
         if self.currency:
             self.currency = self.currency.strip().upper()
-        # Keep billing_interval and billing_frequency synchronized
-        if self.billing_interval and not self.billing_frequency:
-            self.billing_frequency = self.billing_interval
-        elif self.billing_frequency and not self.billing_interval:
+        # Keep billing_interval and billing_frequency synchronized without overwriting explicit frequency
+        if self.billing_frequency and not self.billing_interval:
             self.billing_interval = self.billing_frequency
-        else:
+        elif self.billing_interval and not self.billing_frequency:
             self.billing_frequency = self.billing_interval
         # Keep base_price and price synchronized if default
         if self.price is not None and self.base_price == Decimal("0.00"):
