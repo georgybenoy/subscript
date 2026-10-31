@@ -28,7 +28,8 @@ class InvoiceStatus(models.TextChoices):
 class InvoiceQuerySet(models.QuerySet):
     """
     Custom QuerySet for Invoice providing database-level annotations for
-    payments, outstanding balance, and overdue state.
+    payments, outstanding balance, and overdue state, as well as protecting
+    against bulk mutations of confirmed invoices.
     """
 
     def with_paid_amount(self):
@@ -65,6 +66,43 @@ class InvoiceQuerySet(models.QuerySet):
                 outstanding__gt=Decimal("0.00"),
             )
         )
+
+    def update(self, **kwargs):
+        financial_fields = {
+            "subtotal",
+            "discount_amount",
+            "tax_amount",
+            "total_amount",
+            "billing_period_start",
+            "billing_period_end",
+            "subscription",
+            "subscription_id",
+        }
+        if financial_fields.intersection(kwargs.keys()):
+            if self.filter(
+                status__in=[
+                    InvoiceStatus.CONFIRMED,
+                    InvoiceStatus.PAID,
+                    InvoiceStatus.CANCELLED,
+                ]
+            ).exists():
+                raise ValidationError(
+                    "Bulk update of financial fields on confirmed, paid, or cancelled invoices is strictly forbidden."
+                )
+        return super().update(**kwargs)
+
+    def delete(self):
+        if self.filter(
+            status__in=[
+                InvoiceStatus.CONFIRMED,
+                InvoiceStatus.PAID,
+                InvoiceStatus.CANCELLED,
+            ]
+        ).exists():
+            raise ValidationError(
+                "Cannot bulk-delete confirmed, paid, or cancelled invoices."
+            )
+        return super().delete()
 
 
 class Invoice(models.Model):
@@ -234,6 +272,38 @@ class Invoice(models.Model):
         return self.due_date < today and self.outstanding_balance > Decimal("0.00")
 
 
+class InvoiceItemQuerySet(models.QuerySet):
+    """
+    QuerySet defense against bulk updates/deletions of items on confirmed invoices.
+    """
+
+    def update(self, **kwargs):
+        if self.filter(
+            invoice__status__in=[
+                InvoiceStatus.CONFIRMED,
+                InvoiceStatus.PAID,
+                InvoiceStatus.CANCELLED,
+            ]
+        ).exists():
+            raise ValidationError(
+                "Cannot bulk-update items on confirmed, paid, or cancelled invoices."
+            )
+        return super().update(**kwargs)
+
+    def delete(self):
+        if self.filter(
+            invoice__status__in=[
+                InvoiceStatus.CONFIRMED,
+                InvoiceStatus.PAID,
+                InvoiceStatus.CANCELLED,
+            ]
+        ).exists():
+            raise ValidationError(
+                "Cannot bulk-delete items on confirmed, paid, or cancelled invoices."
+            )
+        return super().delete()
+
+
 class InvoiceItem(models.Model):
     """
     Snapshot line item billed on an invoice.
@@ -261,6 +331,8 @@ class InvoiceItem(models.Model):
     line_subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     line_tax = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     line_total = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
+    objects = InvoiceItemQuerySet.as_manager()
 
     class Meta:
         db_table = "billing_invoiceitem"

@@ -24,6 +24,23 @@ class PaymentMethod(models.TextChoices):
     OTHER = "OTHER", "Other"
 
 
+class PaymentQuerySet(models.QuerySet):
+    """
+    QuerySet defense against bulk updates/deletions of Payment records.
+    All payments are strictly immutable and append-only.
+    """
+
+    def update(self, **kwargs):
+        raise ValidationError(
+            "Bulk update of Payment records is strictly forbidden. Payments are append-only financial records."
+        )
+
+    def delete(self):
+        raise ValidationError(
+            "Bulk deletion of Payment records is strictly forbidden. Payments are permanent audit records."
+        )
+
+
 class Payment(models.Model):
     """
     Settled monetary transaction recorded against an invoice.
@@ -47,6 +64,8 @@ class Payment(models.Model):
     reference = models.CharField(max_length=150, unique=True, db_index=True)
     notes = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    objects = PaymentQuerySet.as_manager()
 
     class Meta:
         db_table = "payments_payment"

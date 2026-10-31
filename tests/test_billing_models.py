@@ -523,3 +523,48 @@ class PaymentModelTests(BaseBillingTestCase):
         payment.refresh_from_db()
         with self.assertRaises(ValidationError):
             payment.delete()
+
+    def test_bulk_payment_update_and_delete_blocked(self):
+        Payment.objects.create(
+            invoice=self.invoice,
+            amount=Decimal("50.00"),
+            method=PaymentMethod.CARD,
+            reference="TXN-BULK-1",
+        )
+        with self.assertRaises(ValidationError):
+            Payment.objects.filter(reference="TXN-BULK-1").update(amount=Decimal("60.00"))
+
+        with self.assertRaises(ValidationError):
+            Payment.objects.filter(reference="TXN-BULK-1").delete()
+
+
+class HardeningAndSyncTests(BaseBillingTestCase):
+    """
+    Verifies that billing integration boundary protects other members' apps
+    and prevents bulk mutations of confirmed invoices.
+    """
+
+    def test_bulk_confirmed_invoice_update_and_delete_blocked(self):
+        inv = Invoice.objects.create(
+            subscription=self.subscription,
+            invoice_number="INV-BULK-TEST",
+            issue_date=date(2026, 1, 1),
+            due_date=date(2026, 1, 16),
+            billing_period_start=date(2026, 1, 1),
+            billing_period_end=date(2026, 1, 31),
+            subtotal=Decimal("100.00"),
+            total_amount=Decimal("100.00"),
+            status=InvoiceStatus.CONFIRMED,
+        )
+        with self.assertRaises(ValidationError):
+            Invoice.objects.filter(id=inv.id).update(total_amount=Decimal("50.00"))
+
+        with self.assertRaises(ValidationError):
+            Invoice.objects.filter(id=inv.id).delete()
+
+    def test_migration_autodetector_never_generates_teammate_migrations(self):
+        from django.core.management import call_command
+        import io
+        out = io.StringIO()
+        call_command("makemigrations", "--check", "--dry-run", stdout=out)
+        self.assertIn("No changes detected", out.getvalue())
