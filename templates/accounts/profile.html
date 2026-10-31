@@ -1,50 +1,62 @@
 {% extends "base.html" %}
 
-{% block title %}My Profile - Subscript{% endblock %}
+{% block title %}User Profile — Subscript{% endblock %}
+{% block breadcrumb %}Profile{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow-sm mt-3">
-            <div class="card-header bg-white">
-                <h4 class="mb-0">User Profile</h4>
+    <div class="col-lg-6">
+        <div class="card-subscript">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title">User Account Profile</h5>
+                    <small class="text-muted">Manage your personal credentials and role assignments</small>
+                </div>
             </div>
             <div class="card-body p-4">
                 <div class="mb-3">
-                    <label class="form-label text-muted">Email Address (Immutable)</label>
-                    <input type="text" class="form-control" value="{{ user.email }}" disabled readonly>
+                    <label class="form-label text-muted small">Email Address (Immutable)</label>
+                    <input type="text" class="form-control-subscript" value="{{ user.email }}" disabled readonly>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-muted">System Role</label>
-                    <input type="text" class="form-control" value="{{ user.get_role_display }}" disabled readonly>
+                <div class="mb-4">
+                    <label class="form-label text-muted small">System Authorization Role</label>
+                    <div>
+                        <span class="badge bg-secondary bg-opacity-25 text-primary border border-secondary border-opacity-25 fs-6 px-3 py-1">
+                            {{ user.get_role_display|default:user.role }}
+                        </span>
+                    </div>
                 </div>
 
-                <hr class="my-4">
-
-                <form method="post" action="{% url 'accounts:profile' %}">
-                    {% csrf_token %}
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
-                            {{ form.first_name }}
-                            {% if form.first_name.errors %}
-                                <div class="text-danger small">{{ form.first_name.errors.0 }}</div>
-                            {% endif %}
+                <div class="border-top border-secondary border-opacity-25 pt-4">
+                    <form method="post" action="{% url 'accounts:profile' %}" class="form-subscript" data-loading-indicator>
+                        {% csrf_token %}
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="form-error-feedback">{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="form-error-feedback">{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
-                            {{ form.last_name }}
-                            {% if form.last_name.errors %}
-                                <div class="text-danger small">{{ form.last_name.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
 
-                    <div class="d-flex justify-content-between align-items-center">
-                        <a href="{% url 'accounts:password_change' %}" class="btn btn-outline-secondary btn-sm">Change Password</a>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+                            <a href="{% url 'accounts:password_change' %}" class="btn btn-subscript-secondary btn-sm">
+                                <i class="bi bi-key"></i> Change Password
+                            </a>
+                            <button type="submit" class="btn btn-subscript-primary">
+                                <i class="bi bi-check2"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

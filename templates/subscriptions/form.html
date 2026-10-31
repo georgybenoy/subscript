@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Edit Subscription{% else %}Create Subscription{% endif %} — Subscript{% endblock %}
+{% block breadcrumb %}
+    <a href="/subscriptions/">Subscriptions</a> <span class="separator">/</span> {% if object %}Edit{% else %}New{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card-subscript">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title">{% if object %}Edit Subscription Agreement{% else %}Deploy New Subscription / Sales Quotation{% endif %}</h5>
+                    <small class="text-muted">Link a customer to a recurring billing plan with custom terms and discounts</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" class="form-subscript" data-loading-indicator>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert-subscript alert-subscript-danger mb-4">
+                            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Customer & Plan Select -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.customer.id_for_label }}" class="form-label">Subscriber / Customer <span class="required-indicator">*</span></label>
+                            {{ form.customer }}
+                            {% if form.customer.errors %}
+                                <div class="form-error-feedback">{{ form.customer.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.plan.id_for_label }}" class="form-label">Plan Attached <span class="required-indicator">*</span></label>
+                            {{ form.plan }}
+                            {% if form.plan.errors %}
+                                <div class="form-error-feedback">{{ form.plan.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Lifecycle State & Discount Code -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Agreement State <span class="required-indicator">*</span></label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="form-error-feedback">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text-subscript">Select 'Quotation' for uncommitted sales offers, or 'Active' for immediate recurring billing.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.discount.id_for_label }}" class="form-label">Promotional Discount (Optional)</label>
+                            {{ form.discount }}
+                            {% if form.discount.errors %}
+                                <div class="form-error-feedback">{{ form.discount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Billing Period Start / End Dates -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.current_period_start.id_for_label }}" class="form-label">Billing Period Start <span class="required-indicator">*</span></label>
+                            {{ form.current_period_start }}
+                            {% if form.current_period_start.errors %}
+                                <div class="form-error-feedback">{{ form.current_period_start.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.current_period_end.id_for_label }}" class="form-label">Billing Period End / Expiry <span class="required-indicator">*</span></label>
+                            {{ form.current_period_end }}
+                            {% if form.current_period_end.errors %}
+                                <div class="form-error-feedback">{{ form.current_period_end.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+                        <a href="/subscriptions/" class="btn btn-subscript-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-subscript-primary">
+                            <i class="bi bi-check2"></i> Save Agreement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

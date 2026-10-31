@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Subscriptions Directory — Subscript{% endblock %}
+{% block breadcrumb %}Subscriptions{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Subscriptions Management</h1>
+        <p class="page-subtitle">Track recurring customer agreements across full lifecycle states</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="/subscriptions/create/?status=quotation" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-file-earmark-plus"></i> New Quotation
+        </a>
+        <a href="/subscriptions/create/" class="btn btn-subscript-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Create Subscription
+        </a>
+    </div>
+</div>
+
+<!-- Lifecycle Status Quick Filters -->
+<div class="d-flex gap-2 mb-3 overflow-auto pb-1">
+    <a href="/subscriptions/" class="btn btn-subscript-secondary btn-sm {% if not request.GET.status %}active border-primary{% endif %}">All</a>
+    <a href="/subscriptions/?status=active" class="btn btn-subscript-secondary btn-sm {% if request.GET.status == 'active' %}active border-primary{% endif %}">Active</a>
+    <a href="/subscriptions/?status=quotation" class="btn btn-subscript-secondary btn-sm {% if request.GET.status == 'quotation' %}active border-primary{% endif %}">Quotations</a>
+    <a href="/subscriptions/?status=draft" class="btn btn-subscript-secondary btn-sm {% if request.GET.status == 'draft' %}active border-primary{% endif %}">Drafts</a>
+    <a href="/subscriptions/?status=paused" class="btn btn-subscript-secondary btn-sm {% if request.GET.status == 'paused' %}active border-primary{% endif %}">Paused</a>
+    <a href="/subscriptions/?status=closed" class="btn btn-subscript-secondary btn-sm {% if request.GET.status == 'closed' %}active border-primary{% endif %}">Closed</a>
+</div>
+
+<!-- Search & Filtering Bar -->
+<div class="card-subscript mb-4">
+    <div class="card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="position-relative">
+                    <input type="text" name="q" value="{{ request.GET.q }}" class="form-control-subscript ps-5" placeholder="Search by customer name, email, or sub ID...">
+                    <i class="bi bi-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="plan" class="form-control-subscript">
+                    <option value="">All Plans</option>
+                    {% for plan in available_plans %}
+                        <option value="{{ plan.pk }}">{{ plan.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-control-subscript">
+                    <option value="">All Statuses</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="QUOTATION">Quotation</option>
+                    <option value="CONFIRMED">Confirmed</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="PAUSED">Paused</option>
+                    <option value="CLOSED">Closed</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-subscript-secondary btn-sm w-100">Filter</button>
+                <a href="/subscriptions/" class="btn btn-subscript-ghost btn-sm">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Subscriptions Table -->
+<div class="card-subscript">
+    <div class="table-responsive">
+        <table class="table-subscript">
+            <thead>
+                <tr>
+                    <th>Subscription #</th>
+                    <th>Customer</th>
+                    <th>Plan Attached</th>
+                    <th>Billing Period</th>
+                    <th>Status</th>
+                    <th class="text-end">Recurring Amount</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in subscriptions %}
+                    <tr>
+                        <td>
+                            <a href="/subscriptions/{{ sub.pk }}/" class="text-primary font-monospace fw-semibold">
+                                SUB-{{ sub.pk|stringformat:"05d" }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="fw-semibold text-light">{{ sub.customer.name }}</div>
+                            <small class="text-muted">{{ sub.customer.email }}</small>
+                        </td>
+                        <td>
+                            <div class="text-light">{{ sub.plan.name }}</div>
+                            <small class="text-muted">{{ sub.plan.get_billing_interval_display|default:"Monthly" }}</small>
+                        </td>
+                        <td>
+                            <div class="small text-light">{{ sub.current_period_start|date:"M d, Y" }}</div>
+                            <small class="text-muted">to {{ sub.current_period_end|date:"M d, Y" }}</small>
+                        </td>
+                        <td>
+                            {% include "partials/_badge.html" with status=sub.status %}
+                        </td>
+                        <td class="text-end font-monospace fw-bold text-light">
+                            ${{ sub.plan.price }}
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-subscript-ghost btn-sm p-1" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                    <li><a class="dropdown-item py-1" href="/subscriptions/{{ sub.pk }}/"><i class="bi bi-eye me-2"></i> View Details</a></li>
+                                    <li><a class="dropdown-item py-1" href="/subscriptions/{{ sub.pk }}/edit/"><i class="bi bi-pencil me-2"></i> Edit Plan/Items</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            {% include "partials/_empty_state.html" with title="No Subscriptions Found" message="Deploy recurring plans to customers or create a sales quotation." action_url="/subscriptions/create/" action_text="Create Subscription" icon="bi-arrow-repeat" %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include "partials/_pagination.html" with page_obj=page_obj %}
+</div>
+{% endblock %}

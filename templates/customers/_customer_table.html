@@ -1,9 +1,9 @@
 <div class="table-responsive">
-    <table class="table table-hover align-middle mb-0">
-        <thead class="table-light">
+    <table class="table-subscript">
+        <thead>
             <tr>
                 <th>Customer / Company</th>
-                <th>Contact</th>
+                <th>Contact Email & Phone</th>
                 <th>Location</th>
                 <th>Tax ID</th>
                 <th>Status</th>
@@ -14,51 +14,61 @@
             {% for customer in page_obj %}
                 <tr>
                     <td>
-                        <div class="fw-bold"><a href="{% url 'customers:detail' customer.pk %}" class="text-decoration-none text-dark">{{ customer.name }}</a></div>
+                        <div class="fw-semibold text-light">
+                            <a href="{% url 'customers:detail' customer.pk %}" class="text-decoration-none text-light">{{ customer.name }}</a>
+                        </div>
                         {% if customer.company_name %}
                             <small class="text-muted">{{ customer.company_name }}</small>
                         {% endif %}
                     </td>
                     <td>
-                        <div>{{ customer.email }}</div>
+                        <div class="text-light">{{ customer.email }}</div>
                         {% if customer.phone %}
                             <small class="text-muted">{{ customer.phone }}</small>
                         {% endif %}
                     </td>
                     <td>
-                        {% if customer.city %}{{ customer.city }}{% endif %}{% if customer.city and customer.country %}, {% endif %}{{ customer.country }}
+                        <span class="text-light">{% if customer.city %}{{ customer.city }}{% endif %}{% if customer.city and customer.country %}, {% endif %}{{ customer.country }}</span>
                     </td>
                     <td>
-                        <span class="badge bg-light text-dark border">{{ customer.tax_id|default:"N/A" }}</span>
+                        <span class="badge bg-dark border text-muted font-monospace">{{ customer.tax_id|default:"--" }}</span>
                     </td>
                     <td>
                         {% if customer.is_active %}
-                            <span class="badge bg-success">Active</span>
+                            <span class="badge-status badge-active">Active</span>
                         {% else %}
-                            <span class="badge bg-secondary">Inactive</span>
+                            <span class="badge-status badge-closed">Inactive</span>
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <div class="btn-group btn-group-sm">
-                            <a href="{% url 'customers:detail' customer.pk %}" class="btn btn-outline-primary">View</a>
-                            <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline-secondary">Edit</a>
-                            {% if request.user.is_admin_role or request.user.is_staff_role %}
-                                <form method="post" action="{% url 'customers:status_toggle' customer.pk %}" class="d-inline">
-                                    {% csrf_token %}
-                                    {% if customer.is_active %}
-                                        <button type="submit" class="btn btn-outline-danger">Deactivate</button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-outline-success">Activate</button>
-                                    {% endif %}
-                                </form>
-                            {% endif %}
+                        <div class="dropdown">
+                            <button class="btn btn-subscript-ghost btn-sm p-1" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                <li><a class="dropdown-item py-1" href="{% url 'customers:detail' customer.pk %}"><i class="bi bi-eye me-2"></i> View Profile</a></li>
+                                <li><a class="dropdown-item py-1" href="{% url 'customers:edit' customer.pk %}"><i class="bi bi-pencil me-2"></i> Edit Customer</a></li>
+                                {% if request.user.is_admin_role or request.user.is_staff_role %}
+                                    <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+                                    <li>
+                                        <form method="post" action="{% url 'customers:status_toggle' customer.pk %}" class="px-2 py-1">
+                                            {% csrf_token %}
+                                            {% if customer.is_active %}
+                                                <button type="submit" class="btn btn-subscript-danger btn-sm w-100 justify-content-center">Deactivate</button>
+                                            {% else %}
+                                                <button type="submit" class="btn btn-subscript-primary btn-sm w-100 justify-content-center">Activate</button>
+                                            {% endif %}
+                                        </form>
+                                    </li>
+                                {% endif %}
+                            </ul>
                         </div>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
-                        No customers match the current search or filter criteria.
+                    <td colspan="6">
+                        {% include "partials/_empty_state.html" with title="No Customers Found" message="No customer profiles match your filter criteria or search keyword." action_url="/customers/create/" action_text="Add Customer" icon="bi-people" %}
                     </td>
                 </tr>
             {% endfor %}
@@ -67,39 +77,4 @@
 </div>
 
 <!-- Pagination Controls -->
-{% if page_obj.has_other_pages %}
-    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
-        <div class="text-muted small">
-            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} customers
-        </div>
-        <nav aria-label="Customer list navigation">
-            <ul class="pagination pagination-sm mb-0">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">Previous</a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
-                {% endif %}
-
-                {% for num in page_obj.paginator.page_range %}
-                    {% if page_obj.number == num %}
-                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">{{ num }}</a>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">Next</a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Next</span></li>
-                {% endif %}
-            </ul>
-        </nav>
-    </div>
-{% endif %}
+{% include "partials/_pagination.html" with page_obj=page_obj container_id="#customer-table-container" %}

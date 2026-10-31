@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name|default:"Product Details" }} — Subscript{% endblock %}
+{% block breadcrumb %}
+    <a href="/products/">Products</a> <span class="separator">/</span> {{ product.name|default:"Details" }}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h1 class="page-title">{{ product.name|default:"Brightloop Core SaaS" }}</h1>
+            {% if product.is_active %}
+                <span class="badge-status badge-active">Active</span>
+            {% else %}
+                <span class="badge-status badge-draft">Inactive</span>
+            {% endif %}
+        </div>
+        <p class="page-subtitle">{{ product.description|default:"Primary recurring subscription business software package." }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/products/" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Back to Catalog
+        </a>
+        <a href="/products/{{ product.pk }}/edit/" class="btn btn-subscript-primary btn-sm">
+            <i class="bi bi-pencil"></i> Edit Product
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Product Specs & Variants -->
+    <div class="col-lg-7">
+        <div class="card-subscript mb-4">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-info-circle me-2 text-primary"></i>Product Specifications</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Base Sales Price</small>
+                        <span class="fs-5 fw-bold text-light">${{ product.sales_price|default:"99.00" }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Internal Cost Price</small>
+                        <span class="fs-5 text-muted">${{ product.cost_price|default:"15.00" }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Product Type</small>
+                        <span class="text-light">{{ product.get_product_type_display|default:"Recurring SaaS" }}</span>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Created Date</small>
+                        <span class="text-light">{{ product.created_at|date:"M d, Y"|default:"Recently" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Variants (Odoo Brand, Edition, Add-ons) -->
+        <div class="card-subscript">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-diagram-3 me-2 text-primary"></i>Available Variants & Add-ons</h5>
+                <button class="btn btn-subscript-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#variantModal">
+                    <i class="bi bi-plus"></i> Add Variant
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table-subscript">
+                    <thead>
+                        <tr>
+                            <th>Variant Attribute</th>
+                            <th>Value</th>
+                            <th>Price Delta</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for variant in product.variants.all %}
+                            <tr>
+                                <td class="fw-semibold text-light">{{ variant.name }}</td>
+                                <td>{{ variant.value }}</td>
+                                <td class="font-monospace text-primary">+${{ variant.price_adjustment }}</td>
+                                <td><span class="badge-status badge-active">Active</span></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td>Brand Variant</td>
+                                <td>Odoo Enterprise Edition</td>
+                                <td class="font-monospace text-primary">+$560.00</td>
+                                <td><span class="badge-status badge-active">Active</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Associated Recurring Plans -->
+    <div class="col-lg-5">
+        <div class="card-subscript">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-calendar2-check me-2 text-primary"></i>Billing Plans</h5>
+                <a href="/products/plans/create/?product={{ product.pk }}" class="btn btn-subscript-secondary btn-sm">
+                    <i class="bi bi-plus"></i> New Plan
+                </a>
+            </div>
+            <div class="card-body">
+                {% for plan in product.plans.all %}
+                    <div class="p-3 mb-3 rounded-3" style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-light">{{ plan.name }}</span>
+                            <span class="badge-status badge-active">{{ plan.get_billing_interval_display|default:"Monthly" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline mt-2">
+                            <span class="fs-4 fw-bold text-primary">${{ plan.price }}</span>
+                            <small class="text-muted">Min Qty: {{ plan.minimum_quantity|default:"1" }}</small>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="p-3 mb-2 rounded-3" style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-light">Standard Monthly Plan</span>
+                            <span class="badge-status badge-active">Monthly</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-baseline mt-2">
+                            <span class="fs-4 fw-bold text-primary">$99.00</span>
+                            <small class="text-muted">Min Qty: 1</small>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

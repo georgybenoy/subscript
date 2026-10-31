@@ -1,0 +1,65 @@
+<header class="app-navbar">
+    <div class="d-flex align-items-center gap-3">
+        <!-- Mobile Sidebar Toggle -->
+        <button type="button" class="btn btn-subscript-ghost d-lg-none p-1" id="sidebarToggle" aria-label="Toggle Navigation">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+
+        <!-- Breadcrumbs -->
+        <div class="nav-breadcrumbs d-none d-sm-flex">
+            <a href="{% url 'dashboard' %}"><i class="bi bi-house-door me-1"></i> Subscript</a>
+            <span class="separator">/</span>
+            <span class="current">{% block breadcrumb %}Platform{% endblock %}</span>
+        </div>
+    </div>
+
+    <!-- Center/Right Search and Actions -->
+    <div class="d-flex align-items-center gap-3">
+        <!-- Global Search Pill -->
+        <div class="search-pill-container d-none d-md-block">
+            <i class="bi bi-search"></i>
+            <input type="text"
+                   id="globalSearchInput"
+                   class="search-input-pill"
+                   placeholder="Search subscriptions, customers, invoices... (Ctrl+K)"
+                   autocomplete="off">
+        </div>
+
+        <!-- Notification Bell -->
+        <div class="dropdown">
+            <button class="btn btn-subscript-ghost position-relative p-2" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-bell fs-5"></i>
+                <span class="position-absolute top-1 start-100 translate-middle p-1 bg-danger border border-dark rounded-circle">
+                    <span class="visually-hidden">New alerts</span>
+                </span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow-lg p-0" style="width: 320px; background-color: var(--bg-surface-elevated); border-color: var(--border-color);">
+                <div class="p-3 border-bottom border-secondary border-opacity-25 d-flex justify-content-between align-items-center">
+                    <span class="fw-semibold text-light small">Notifications</span>
+                    <span class="badge bg-primary bg-opacity-25 text-primary small">System</span>
+                </div>
+                <div class="p-2" style="max-height: 280px; overflow-y: auto;">
+                    <a href="/billing/" class="dropdown-item py-2 px-3 rounded-2 text-wrap d-flex gap-2 align-items-start">
+                        <i class="bi bi-credit-card text-warning mt-1"></i>
+                        <div>
+                            <div class="small fw-semibold text-light">Overdue invoices requiring review</div>
+                            <small class="text-muted">3 customer renewals past due</small>
+                        </div>
+                    </a>
+                    <a href="/subscriptions/" class="dropdown-item py-2 px-3 rounded-2 text-wrap d-flex gap-2 align-items-start">
+                        <i class="bi bi-arrow-repeat text-success mt-1"></i>
+                        <div>
+                            <div class="small fw-semibold text-light">Automatic billing cycle complete</div>
+                            <small class="text-muted">Batch processing executed cleanly</small>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Status Indicator -->
+        <div class="d-none d-lg-flex align-items-center gap-2 border-start border-secondary border-opacity-25 ps-3">
+            <span class="badge-status badge-active">Live Engine</span>
+        </div>
+    </div>
+</header>

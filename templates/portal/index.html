@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Billing Portal — Subscript{% endblock %}
+{% block breadcrumb %}Customer Portal{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Customer Billing Portal</h1>
+        <p class="page-subtitle">Manage your active software subscriptions, billing methods, and invoice history</p>
+    </div>
+    <div>
+        <a href="{% url 'accounts:profile' %}" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-person-gear"></i> Account Settings
+        </a>
+    </div>
+</div>
+
+<!-- Account Balance Overview -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        {% include "partials/_kpi_card.html" with title="Active Subscriptions" value=active_subscriptions_count|default:"1" icon="bi-arrow-repeat" trend="Licensed Services" trend_type="positive" %}
+    </div>
+    <div class="col-md-4">
+        {% include "partials/_kpi_card.html" with title="Next Billing Cycle" value=next_cycle_date|default:"Nov 15, 2026" icon="bi-calendar3" trend="Automatic Renewal" trend_type="neutral" %}
+    </div>
+    <div class="col-md-4">
+        {% include "partials/_kpi_card.html" with title="Current Outstanding" value=outstanding_amount|default:"$0.00" icon="bi-credit-card" trend="Account in good standing" trend_type="positive" %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Active Subscriptions -->
+    <div class="col-lg-7">
+        <div class="card-subscript mb-4">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-box-seam me-2 text-primary"></i>My Software Subscriptions</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table-subscript">
+                    <thead>
+                        <tr>
+                            <th>Plan / Service</th>
+                            <th>Cycle</th>
+                            <th>Status</th>
+                            <th>Next Renewal</th>
+                            <th class="text-end">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in subscriptions %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-light">{{ sub.plan.product.name|default:sub.plan.name }}</div>
+                                    <small class="text-muted">{{ sub.plan.name }}</small>
+                                </td>
+                                <td>{{ sub.plan.get_billing_interval_display|default:"Monthly" }}</td>
+                                <td>{% include "partials/_badge.html" with status=sub.status %}</td>
+                                <td class="small">{{ sub.current_period_end|date:"M d, Y" }}</td>
+                                <td class="text-end font-monospace fw-bold text-light">${{ sub.plan.price }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-light">Brightloop Business Suite</div>
+                                    <small class="text-muted">Pro Plan (10 seats)</small>
+                                </td>
+                                <td>Monthly</td>
+                                <td><span class="badge-status badge-active">Active</span></td>
+                                <td class="small">Nov 15, 2026</td>
+                                <td class="text-end font-monospace fw-bold text-light">$99.00</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Invoices & Receipts -->
+        <div class="card-subscript">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-receipt me-2 text-primary"></i>Invoice & Statement History</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table-subscript">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date Issued</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th class="text-end">Amount</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                            <tr>
+                                <td><span class="text-primary font-monospace">{{ inv.invoice_number }}</span></td>
+                                <td>{{ inv.created_at|date:"M d, Y" }}</td>
+                                <td>{{ inv.due_date|date:"M d, Y" }}</td>
+                                <td>{% include "partials/_badge.html" with status=inv.status %}</td>
+                                <td class="text-end font-monospace fw-bold">${{ inv.total }}</td>
+                                <td class="text-end">
+                                    <a href="/billing/{{ inv.pk }}/pdf/" class="btn btn-subscript-secondary btn-sm p-1 px-2">
+                                        <i class="bi bi-download"></i> PDF
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td><span class="text-primary font-monospace">INV-2026-0042</span></td>
+                                <td>Oct 15, 2026</td>
+                                <td>Nov 15, 2026</td>
+                                <td><span class="badge-status badge-paid">Paid</span></td>
+                                <td class="text-end font-monospace fw-bold">$99.00</td>
+                                <td class="text-end">
+                                    <button class="btn btn-subscript-secondary btn-sm p-1 px-2"><i class="bi bi-download"></i> PDF</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account & Billing Profile -->
+    <div class="col-lg-5">
+        <div class="card-subscript mb-4">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-person-check me-2 text-primary"></i>Account Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted d-block">Authorized Representative</small>
+                    <span class="fw-semibold text-light">{{ request.user.get_full_name|default:request.user.email }}</span>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Primary Email</small>
+                    <span class="text-light">{{ request.user.email }}</span>
+                </div>
+                <div class="mb-3">
+                    <small class="text-muted d-block">Role Permissions</small>
+                    <span class="badge bg-dark border text-light">{{ request.user.get_role_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-subscript">
+            <div class="card-header">
+                <h5 class="card-title"><i class="bi bi-shield-lock me-2 text-primary"></i>Security & Invoices</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">All invoices are cryptographically verified and meet GSTIN and VAT regulatory standards.</p>
+                <a href="{% url 'accounts:password_change' %}" class="btn btn-subscript-secondary btn-sm w-100 justify-content-center">
+                    <i class="bi bi-key"></i> Update Security Credentials
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

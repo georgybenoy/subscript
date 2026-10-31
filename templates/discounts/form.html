@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}{% if object %}Edit Discount{% else %}Create Discount Rule{% endif %} — Subscript{% endblock %}
+{% block breadcrumb %}
+    <a href="/discounts/">Discounts</a> <span class="separator">/</span> {% if object %}Edit{% else %}Create{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-subscript">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title">{% if object %}Edit Discount Rule{% else %}Create New Promotional Discount Rule{% endif %}</h5>
+                    <small class="text-muted">Configure coupons, fixed discounts, and usage limits</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" class="form-subscript" data-loading-indicator>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert-subscript alert-subscript-danger mb-4">
+                            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.code.id_for_label }}" class="form-label">Promotional Code <span class="required-indicator">*</span></label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="form-error-feedback">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text-subscript">e.g. BRIGHTLOOP20, VOLUME50</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.discount_type.id_for_label }}" class="form-label">Discount Calculation Type <span class="required-indicator">*</span></label>
+                            {{ form.discount_type }}
+                            {% if form.discount_type.errors %}
+                                <div class="form-error-feedback">{{ form.discount_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.amount.id_for_label }}" class="form-label">Discount Amount (% or $) <span class="required-indicator">*</span></label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                                <div class="form-error-feedback">{{ form.amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.max_redemptions.id_for_label }}" class="form-label">Maximum Total Redemptions</label>
+                            {{ form.max_redemptions }}
+                            {% if form.max_redemptions.errors %}
+                                <div class="form-error-feedback">{{ form.max_redemptions.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text-subscript">Leave empty for unlimited redemptions.</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.valid_from.id_for_label }}" class="form-label">Valid From Date <span class="required-indicator">*</span></label>
+                            {{ form.valid_from }}
+                            {% if form.valid_from.errors %}
+                                <div class="form-error-feedback">{{ form.valid_from.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.valid_until.id_for_label }}" class="form-label">Valid Until (Expiry)</label>
+                            {{ form.valid_until }}
+                            {% if form.valid_until.errors %}
+                                <div class="form-error-feedback">{{ form.valid_until.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+                        <a href="/discounts/" class="btn btn-subscript-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-subscript-primary">
+                            <i class="bi bi-check2"></i> Save Rule
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

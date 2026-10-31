@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Invoice {{ invoice.invoice_number|default:"INV-2026-0042" }} — Subscript{% endblock %}
+{% block breadcrumb %}
+    <a href="/billing/">Invoices</a> <span class="separator">/</span> {{ invoice.invoice_number|default:"INV-2026-0042" }}
+{% endblock %}
+
+{% block content %}
+<!-- Top Header Actions -->
+<div class="page-header">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <h1 class="page-title font-monospace">{{ invoice.invoice_number|default:"INV-2026-0042" }}</h1>
+            {% include "partials/_badge.html" with status=invoice.status|default:"PAID" %}
+        </div>
+        <p class="page-subtitle">Billing statement issued to {{ invoice.customer.name|default:"Brightloop Software Customer" }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/billing/" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> All Invoices
+        </a>
+        <button onclick="window.print()" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-printer"></i> Print
+        </button>
+        <a href="/billing/{{ invoice.pk }}/pdf/" class="btn btn-subscript-secondary btn-sm">
+            <i class="bi bi-file-earmark-pdf"></i> Download PDF
+        </a>
+        {% if invoice.status != 'PAID' %}
+            <a href="/payments/record/?invoice={{ invoice.pk }}" class="btn btn-subscript-primary btn-sm">
+                <i class="bi bi-credit-card"></i> Record Payment
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Modern SaaS Dark Invoice Card -->
+        <div class="card-subscript p-4 p-md-5 mb-4">
+            <!-- Brand & Invoice Metadata -->
+            <div class="row align-items-start mb-5">
+                <div class="col-sm-6 mb-4 mb-sm-0">
+                    <div class="brand-logo mb-2">
+                        <span class="brand-icon">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                        </span>
+                        <span>Subscript</span>
+                    </div>
+                    <small class="text-muted d-block">Subscript Platform Inc.</small>
+                    <small class="text-muted d-block">Tax ID: SUBSCRIPT-GST-9921</small>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <div class="fs-4 fw-bold font-monospace text-light mb-1">{{ invoice.invoice_number|default:"INV-2026-0042" }}</div>
+                    <div class="small text-muted">Issue Date: <span class="text-light">{{ invoice.created_at|date:"M d, Y"|default:"Oct 15, 2026" }}</span></div>
+                    <div class="small text-muted">Payment Due: <span class="text-light">{{ invoice.due_date|date:"M d, Y"|default:"Nov 15, 2026" }}</span></div>
+                    {% if invoice.paid_at %}
+                        <div class="small text-success mt-1"><i class="bi bi-check-circle-fill me-1"></i> Paid on {{ invoice.paid_at|date:"M d, Y H:i" }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Bill To Customer Details -->
+            <div class="row mb-5 pb-4 border-bottom border-secondary border-opacity-25">
+                <div class="col-md-6">
+                    <span class="text-muted text-uppercase small fw-bold tracking-wide d-block mb-2">Billed To</span>
+                    <h5 class="fw-bold text-light mb-1">{{ invoice.customer.name|default:"Brightloop Enterprise Customer" }}</h5>
+                    {% if invoice.customer.company_name %}
+                        <div class="text-secondary small mb-1">{{ invoice.customer.company_name }}</div>
+                    {% endif %}
+                    <div class="text-muted small">{{ invoice.customer.email|default:"billing@brightloop.com" }}</div>
+                    <div class="text-muted small">{{ invoice.customer.billing_address|default:"100 Innovation Blvd, Tech Park" }}</div>
+                    <div class="text-muted small">Tax ID / GSTIN: <span class="font-monospace text-light">{{ invoice.customer.tax_id|default:"GSTIN-IN-88390" }}</span></div>
+                </div>
+                <div class="col-md-6 text-md-end mt-4 mt-md-0">
+                    <span class="text-muted text-uppercase small fw-bold tracking-wide d-block mb-2">Linked Agreement</span>
+                    <div class="text-light fw-semibold">
+                        {% if invoice.subscription %}
+                            <a href="/subscriptions/{{ invoice.subscription.pk }}/" class="text-primary font-monospace">
+                                SUB-{{ invoice.subscription.pk|stringformat:"05d" }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted font-monospace">Standalone Invoice</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Line Items Table -->
+            <div class="table-responsive mb-4">
+                <table class="table-subscript">
+                    <thead>
+                        <tr>
+                            <th>Item Description</th>
+                            <th class="text-center">Quantity</th>
+                            <th class="text-end">Unit Price</th>
+                            <th class="text-end">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in invoice.items.all %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-light">{{ item.description }}</div>
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end font-monospace">${{ item.unit_price }}</td>
+                                <td class="text-end font-monospace fw-bold text-light">${{ item.amount }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-light">Brightloop Software Subscription — Enterprise Plan</div>
+                                    <small class="text-muted">Monthly recurring license (Oct 15 - Nov 15)</small>
+                                </td>
+                                <td class="text-center">1</td>
+                                <td class="text-end font-monospace">$99.00</td>
+                                <td class="text-end font-monospace fw-bold text-light">$99.00</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold text-light">Brand Add-on Variant: Odoo Integration</div>
+                                    <small class="text-muted">High capacity connector license</small>
+                                </td>
+                                <td class="text-center">1</td>
+                                <td class="text-end font-monospace">$560.00</td>
+                                <td class="text-end font-monospace fw-bold text-light">$560.00</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Totals Calculation Summary -->
+            <div class="row justify-content-end mb-4">
+                <div class="col-md-5">
+                    <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
+                        <span class="text-muted">Subtotal</span>
+                        <span class="font-monospace text-light">${{ invoice.subtotal|default:"659.00" }}</span>
+                    </div>
+                    {% if invoice.discount_amount %}
+                        <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25 text-success">
+                            <span>Promotional Discount</span>
+                            <span class="font-monospace">-${{ invoice.discount_amount }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
+                        <span class="text-muted">Applicable Tax (Auto-Rule)</span>
+                        <span class="font-monospace text-light">${{ invoice.tax_amount|default:"0.00" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-3 align-items-center">
+                        <span class="fs-5 fw-bold text-light">Total Due</span>
+                        <span class="fs-4 fw-bold font-monospace text-primary">${{ invoice.total|default:"659.00" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes & Footer -->
+            <div class="p-3 rounded-3" style="background-color: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
+                <small class="text-muted d-block fw-semibold mb-1">Payment Instructions & Policy</small>
+                <small class="text-muted">Subscriptions are billed in advance for each cycle. Automated credit card payments will settle within 24 hours.</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

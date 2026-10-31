@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Discounts & Promotions — Subscript{% endblock %}
+{% block breadcrumb %}Discounts{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Discounts & Coupons</h1>
+        <p class="page-subtitle">Promotional rules, multi-seat pricing incentives, and subscription coupons</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <a href="/discounts/create/" class="btn btn-subscript-primary btn-sm">
+            <i class="bi bi-plus-lg"></i> Create Discount Rule
+        </a>
+    </div>
+</div>
+
+<!-- Discounts Table -->
+<div class="card-subscript">
+    <div class="table-responsive">
+        <table class="table-subscript">
+            <thead>
+                <tr>
+                    <th>Coupon Code</th>
+                    <th>Discount Type</th>
+                    <th>Value / Rate</th>
+                    <th>Validity Period</th>
+                    <th>Redemptions</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for discount in discounts %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-25 text-primary border border-secondary border-opacity-25 font-monospace fs-6 px-2 py-1">
+                                {{ discount.code }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="text-light">{{ discount.get_discount_type_display|default:discount.discount_type }}</span>
+                        </td>
+                        <td class="font-monospace fw-bold text-light">
+                            {% if discount.discount_type == 'PERCENTAGE' %}
+                                {{ discount.amount }}% OFF
+                            {% else %}
+                                ${{ discount.amount }} OFF
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="small text-light">{{ discount.valid_from|date:"M d, Y" }}</div>
+                            <small class="text-muted">to {{ discount.valid_until|date:"M d, Y"|default:"Indefinite" }}</small>
+                        </td>
+                        <td>
+                            <div class="text-light">{{ discount.times_redeemed|default:"0" }} / {{ discount.max_redemptions|default:"Unlimited" }}</div>
+                        </td>
+                        <td>
+                            {% if discount.is_active %}
+                                <span class="badge-status badge-active">Active</span>
+                            {% else %}
+                                <span class="badge-status badge-closed">Expired</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="dropdown">
+                                <button class="btn btn-subscript-ghost btn-sm p-1" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                                    <li><a class="dropdown-item py-1" href="/discounts/{{ discount.pk }}/edit/"><i class="bi bi-pencil me-2"></i> Edit Rule</a></li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            {% include "partials/_empty_state.html" with title="No Discount Rules Found" message="Create coupons or volume-seat rules to reward growing customers." action_url="/discounts/create/" action_text="New Discount" icon="bi-percent" %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% include "partials/_pagination.html" with page_obj=page_obj %}
+</div>
+{% endblock %}
