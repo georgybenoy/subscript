@@ -54,10 +54,10 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "customers.apps.CustomersConfig",
     "products.apps.ProductsConfig",
+    "discounts.apps.DiscountsConfig",
     "subscriptions.apps.SubscriptionsConfig",
     "billing.apps.BillingConfig",
     "payments.apps.PaymentsConfig",
-    "discounts.apps.DiscountsConfig",
     "analytics.apps.AnalyticsConfig",
 ]
 
