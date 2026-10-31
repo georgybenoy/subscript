@@ -77,5 +77,7 @@ class RoutingSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_customers_list_placeholder(self):
+        user = User.objects.create_user(email="custsmoke@example.com", password="CustPassword1!")
+        self.client.login(email="custsmoke@example.com", password="CustPassword1!")
         response = self.client.get(reverse("customers:list"))
         self.assertEqual(response.status_code, 200)

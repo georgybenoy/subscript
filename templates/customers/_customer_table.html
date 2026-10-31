@@ -1,0 +1,105 @@
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>Customer / Company</th>
+                <th>Contact</th>
+                <th>Location</th>
+                <th>Tax ID</th>
+                <th>Status</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for customer in page_obj %}
+                <tr>
+                    <td>
+                        <div class="fw-bold"><a href="{% url 'customers:detail' customer.pk %}" class="text-decoration-none text-dark">{{ customer.name }}</a></div>
+                        {% if customer.company_name %}
+                            <small class="text-muted">{{ customer.company_name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div>{{ customer.email }}</div>
+                        {% if customer.phone %}
+                            <small class="text-muted">{{ customer.phone }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if customer.city %}{{ customer.city }}{% endif %}{% if customer.city and customer.country %}, {% endif %}{{ customer.country }}
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">{{ customer.tax_id|default:"N/A" }}</span>
+                    </td>
+                    <td>
+                        {% if customer.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'customers:detail' customer.pk %}" class="btn btn-outline-primary">View</a>
+                            <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline-secondary">Edit</a>
+                            {% if request.user.is_admin_role or request.user.is_staff_role %}
+                                <form method="post" action="{% url 'customers:status_toggle' customer.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    {% if customer.is_active %}
+                                        <button type="submit" class="btn btn-outline-danger">Deactivate</button>
+                                    {% else %}
+                                        <button type="submit" class="btn btn-outline-success">Activate</button>
+                                    {% endif %}
+                                </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        No customers match the current search or filter criteria.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination Controls -->
+{% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+        <div class="text-muted small">
+            Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} customers
+        </div>
+        <nav aria-label="Customer list navigation">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ page_obj.previous_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">Previous</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ num }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-get="?page={{ page_obj.next_page_number }}{% if preserved_query %}&{{ preserved_query }}{% endif %}" hx-target="#customer-table-container" hx-push-url="true">Next</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+{% endif %}

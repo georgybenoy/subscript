@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} - Customer Details - Subscript{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-7">
+        <h3 class="mb-1">{{ customer.name }}</h3>
+        <p class="text-muted mb-0">
+            {% if customer.company_name %}<span class="fw-semibold">{{ customer.company_name }}</span> &bull; {% endif %}
+            Customer ID: #{{ customer.pk }} &bull;
+            {% if customer.is_active %}
+                <span class="badge bg-success">Active</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        <div class="btn-group">
+            <a href="{% url 'customers:edit' customer.pk %}" class="btn btn-outline-primary btn-sm">Edit Customer</a>
+            {% if request.user.is_admin_role or request.user.is_staff_role %}
+                <form method="post" action="{% url 'customers:status_toggle' customer.pk %}" class="d-inline ms-1">
+                    {% csrf_token %}
+                    {% if customer.is_active %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm">Deactivate Account</button>
+                    {% else %}
+                        <button type="submit" class="btn btn-outline-success btn-sm">Activate Account</button>
+                    {% endif %}
+                </form>
+            {% endif %}
+        </div>
+        <a href="{% url 'customers:list' %}" class="btn btn-link btn-sm text-decoration-none ms-2">&larr; Back to Directory</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Customer Profile Information -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Contact & Organization</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small">Billing Email</label>
+                    <div class="fw-semibold">{{ customer.email }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Phone Number</label>
+                    <div>{{ customer.phone|default:"Not provided" }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Tax ID (GSTIN / VAT)</label>
+                    <div><span class="badge bg-light text-dark border">{{ customer.tax_id|default:"None" }}</span></div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Linked User Account</label>
+                    <div>
+                        {% if customer.user %}
+                            <span class="badge bg-info text-dark">{{ customer.user.email }}</span>
+                        {% else %}
+                            <span class="text-muted italic small">Unlinked (Guest / Managed by Staff)</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="mb-0">
+                    <label class="text-muted small">Registered Since</label>
+                    <div class="small text-muted">{{ customer.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Billing Address -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Billing & Geographic Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Street Address</label>
+                        <div>{{ customer.billing_address|linebreaksbr|default:"No street address specified" }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-2">
+                            <label class="text-muted small">City</label>
+                            <div class="fw-semibold">{{ customer.city|default:"-" }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="text-muted small">State / Province</label>
+                            <div>{{ customer.state|default:"-" }}</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="text-muted small">Country</label>
+                            <div>{{ customer.country|default:"-" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- INTEGRATION BLOCKS (GUARDED FOR MEMBER 3 & MEMBER 4 MODULES)              -->
+<!-- ========================================================================= -->
+
+<!-- 1. Subscriptions Module Integration Block (Member 3) -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0">Active & Past Subscriptions</h5>
+        <span class="badge bg-secondary">Member 3 Domain: subscriptions/</span>
+    </div>
+    <div class="card-body">
+        {% if subscriptions %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Period Start</th>
+                            <th>Period End</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in subscriptions %}
+                            <tr>
+                                <td>{{ sub.plan.name }}</td>
+                                <td><span class="badge bg-primary">{{ sub.status }}</span></td>
+                                <td>{{ sub.current_period_start|date:"M d, Y" }}</td>
+                                <td>{{ sub.current_period_end|date:"M d, Y" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-muted py-3 text-center">
+                <p class="mb-1">No active subscriptions on record.</p>
+                <small class="text-secondary">Integration ready: Subscriptions will automatically display here once Member 3 initializes <code>subscriptions.Subscription</code>.</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 2. Billing & Invoices Module Integration Block (Member 4) -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0">Billing Statements & Invoices</h5>
+        <span class="badge bg-secondary">Member 4 Domain: billing/</span>
+    </div>
+    <div class="card-body">
+        {% if invoices %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Invoice #</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in invoices %}
+                            <tr>
+                                <td>{{ inv.invoice_number }}</td>
+                                <td>{{ inv.created_at|date:"M d, Y" }}</td>
+                                <td>{{ inv.total }}</td>
+                                <td><span class="badge bg-secondary">{{ inv.status }}</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-muted py-3 text-center">
+                <p class="mb-1">No invoices generated for this customer.</p>
+                <small class="text-secondary">Integration ready: Invoices will automatically appear here once Member 4 configures <code>billing.Invoice</code>.</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- 3. Payments Module Integration Block (Member 4) -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0">Payment Transactions</h5>
+        <span class="badge bg-secondary">Member 4 Domain: payments/</span>
+    </div>
+    <div class="card-body">
+        {% if payments %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Txn Reference</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pay in payments %}
+                            <tr>
+                                <td><code>{{ pay.transaction_reference }}</code></td>
+                                <td>{{ pay.created_at|date:"M d, Y" }}</td>
+                                <td>{{ pay.currency }} {{ pay.amount }}</td>
+                                <td>{{ pay.payment_method }}</td>
+                                <td><span class="badge bg-success">{{ pay.status }}</span></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-muted py-3 text-center">
+                <p class="mb-1">No payment transactions recorded.</p>
+                <small class="text-secondary">Integration ready: Recorded transactions will render here once Member 4 configures <code>payments.Payment</code>.</small>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
