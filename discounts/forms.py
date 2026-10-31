@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from decimal import Decimal
 from django import forms
 from django.utils import timezone
@@ -83,9 +84,21 @@ class DiscountForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        instance.start_date = self.cleaned_data.get("valid_from")
-        instance.end_date = self.cleaned_data.get("valid_until")
-        instance.usage_limit = self.cleaned_data.get("max_redemptions")
+        valid_from = self.cleaned_data.get("valid_from")
+        if valid_from:
+            if isinstance(valid_from, date) and not isinstance(valid_from, datetime):
+                instance.valid_from = timezone.make_aware(datetime.combine(valid_from, datetime.min.time()))
+            else:
+                instance.valid_from = valid_from
+        valid_until = self.cleaned_data.get("valid_until")
+        if valid_until:
+            if isinstance(valid_until, date) and not isinstance(valid_until, datetime):
+                instance.valid_until = timezone.make_aware(datetime.combine(valid_until, datetime.max.time().replace(microsecond=0)))
+            else:
+                instance.valid_until = valid_until
+        else:
+            instance.valid_until = None
+        instance.max_redemptions = self.cleaned_data.get("max_redemptions")
         if commit:
             instance.save()
         return instance

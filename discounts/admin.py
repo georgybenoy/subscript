@@ -6,15 +6,20 @@ from .models import Discount
 class DiscountAdmin(admin.ModelAdmin):
     list_display = (
         "code",
-        "name",
         "discount_type",
         "amount",
-        "start_date",
-        "end_date",
-        "times_used",
-        "usage_limit",
         "is_active",
+        "valid_from",
+        "valid_until",
+        "redemption_progress",
+        "created_at",
     )
-    list_filter = ("discount_type", "is_active", "start_date", "end_date")
-    search_fields = ("code", "name")
-    readonly_fields = ("created_at", "updated_at", "times_used")
+    list_filter = ("discount_type", "is_active", "valid_from", "valid_until")
+    search_fields = ("code",)
+    ordering = ("-created_at",)
+
+    @admin.display(description="Redemptions")
+    def redemption_progress(self, obj):
+        if obj.max_redemptions is not None:
+            return f"{obj.times_redeemed} / {obj.max_redemptions}"
+        return f"{obj.times_redeemed} / ∞ (Unlimited)"

@@ -1,0 +1,22 @@
+<div id="discount-feedback" class="discount-badge-container my-2">
+    {% if valid %}
+        <div class="alert alert-success d-flex align-items-center mb-0 py-2 px-3" role="alert">
+            <div>
+                <span class="badge bg-success me-2">{{ code }}</span>
+                <strong>Applied!</strong> {{ message }}
+                <div class="small text-muted mt-1">
+                    Discount Amount: <strong>-₹{{ discount_amount }}</strong> &bull; Updated Total: <strong>₹{{ final_total }}</strong>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-danger d-flex align-items-center mb-0 py-2 px-3" role="alert">
+            <div>
+                {% if code %}
+                    <span class="badge bg-danger me-2">{{ code }}</span>
+                {% endif %}
+                <strong>Invalid:</strong> {{ message }}
+            </div>
+        </div>
+    {% endif %}
+</div>
