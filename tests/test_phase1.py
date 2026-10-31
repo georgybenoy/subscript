@@ -66,9 +66,11 @@ class RoutingSmokeTests(TestCase):
         self.client = Client()
 
     def test_dashboard_smoke_test(self):
+        user = User.objects.create_user(email="dash@example.com", password="DashPassword1!")
+        self.client.login(email="dash@example.com", password="DashPassword1!")
         response = self.client.get(reverse("dashboard"))
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b"Subscript Dashboard", response.content)
+        self.assertIn(b"Welcome back", response.content)
 
     def test_accounts_login_placeholder(self):
         response = self.client.get(reverse("accounts:login"))
