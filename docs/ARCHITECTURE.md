@@ -173,3 +173,45 @@ All templates extend `templates/base.html`:
   - The `<body>` tag includes `hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'` so all HTMX `hx-get`, `hx-post`, and `hx-put` requests automatically send valid CSRF headers.
 - Flash messages:
   - Standard Django messages framework is rendered automatically above `{% block content %}` in `templates/base.html`.
+
+---
+
+## 8. Full Resolved Project URL Map
+
+All URLs resolved by django.urls.get_resolver() across all integrated applications:
+
+| Path Pattern | URL Name | Namespace | View / Callback | Auth / Access Requirement |
+| :--- | :--- | :--- | :--- | :--- |
+| / | dashboard | - | config.views.dashboard_view | Login required (Role-aware dashboard) |
+| ccounts/register/ | ccounts:register | ccounts | ccounts.views.register_view | Public / Anonymous |
+| ccounts/login/ | ccounts:login | ccounts | ccounts.views.login_view | Public (Rate-limited, max 5 attempts) |
+| ccounts/logout/ | ccounts:logout | ccounts | ccounts.views.logout_view | Login required |
+| ccounts/password_reset/ | ccounts:password_reset | ccounts | django.contrib.auth.views.PasswordResetView | Public |
+| ccounts/password_reset/done/ | ccounts:password_reset_done | ccounts | django.contrib.auth.views.PasswordResetDoneView | Public |
+| ccounts/reset/<uidb64>/<token>/ | ccounts:password_reset_confirm | ccounts | django.contrib.auth.views.PasswordResetConfirmView | Public |
+| ccounts/reset/done/ | ccounts:password_reset_complete | ccounts | django.contrib.auth.views.PasswordResetCompleteView | Public |
+| ccounts/password_change/ | ccounts:password_change | ccounts | django.contrib.auth.views.PasswordChangeView | Login required |
+| ccounts/password_change/done/ | ccounts:password_change_done | ccounts | django.contrib.auth.views.PasswordChangeDoneView | Login required |
+| ccounts/profile/ | ccounts:profile | ccounts | ccounts.views.profile_view | Login required |
+| ccounts/staff/create/ | ccounts:staff_create | ccounts | ccounts.views.staff_create_view | Admin only |
+| ccounts/users/ | ccounts:user_list | ccounts | ccounts.views.user_list_view | Admin only |
+| ccounts/users/<id>/toggle-active/ | ccounts:user_toggle_active | ccounts | ccounts.views.user_toggle_active_view | Admin only |
+| customers/ | customers:list | customers | customers.views.customer_list_view | Login required (Staff/Admin all, Customer own) |
+| customers/create/ | customers:create | customers | customers.views.customer_create_view | Staff / Admin only |
+| customers/<pk>/ | customers:detail | customers | customers.views.customer_detail_view | Login required (Object-level IDOR check) |
+| customers/<pk>/edit/ | customers:edit | customers | customers.views.customer_edit_view | Login required (Staff/Admin or own profile) |
+| customers/<pk>/status/ | customers:status_toggle | customers | customers.views.customer_status_toggle_view | Staff / Admin only |
+| illing/ | illing:invoice_list | illing | illing.views.invoice_list_view | Login required (Scoped by role) |
+| illing/invoices/ | illing:invoice_list_invoices | illing | illing.views.invoice_list_view | Login required (Alias) |
+| illing/<pk>/ | illing:invoice_detail | illing | illing.views.invoice_detail_view | Login required (Scoped by role) |
+| illing/invoices/<pk>/ | illing:invoice_detail_invoices | illing | illing.views.invoice_detail_view | Login required (Alias) |
+| illing/<pk>/confirm/ | illing:invoice_confirm | illing | illing.views.confirm_invoice_view | Staff / Admin only |
+| illing/<pk>/cancel/ | illing:invoice_cancel | illing | illing.views.cancel_invoice_view | Staff / Admin only |
+| illing/<pk>/pdf/ | illing:invoice_pdf | illing | illing.views.invoice_pdf_view | Login required (Scoped by role) |
+| illing/invoices/<pk>/pdf/ | illing:invoice_pdf_alias | illing | illing.views.invoice_pdf_view | Login required (Alias) |
+| payments/ | payments:payment_list | payments | payments.views.payment_list_view | Login required (Scoped by role) |
+| payments/create/ | payments:payment_create | payments | payments.views.payment_create_view | Staff / Admin only |
+| payments/record/ | payments:payment_record | payments | payments.views.payment_create_view | Staff / Admin only (Alias) |
+| payments/<pk>/ | payments:payment_detail | payments | payments.views.payment_detail_view | Login required (Scoped by role) |
+| nalytics/ | nalytics:dashboard | nalytics | nalytics.views.analytics_dashboard_view | Staff / Admin only |
+| nalytics/data/ | nalytics:data | nalytics | nalytics.views.analytics_data_json_view | Staff / Admin only |

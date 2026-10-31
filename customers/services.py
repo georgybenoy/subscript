@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from django.apps import apps
 from django.contrib.auth import get_user_model
@@ -6,6 +7,7 @@ from django.db.models import Q, QuerySet
 from django.http import Http404
 from .models import Customer
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -195,37 +197,53 @@ def scope_queryset_for_user(qs: QuerySet, user, customer_lookup: str = "customer
 # ==============================================================================
 # INTEGRATION HELPERS (LAZY LOADING FOR TEAMMATES' APPS)
 # ==============================================================================
-def get_customer_subscriptions(customer: Customer):
+def get_customer_subscriptions(customer: Customer, user=None):
     """
-    Retrieves subscriptions for a customer if Member 3's subscriptions app is active.
-    Gracefully falls back to empty list if unmigrated or uninitialized.
+    Retrieves subscriptions for a customer scoped by role.
+    Gracefully handles missing models/tables by returning empty list.
     """
+    if user and getattr(user, "is_customer_role", False) and customer.user_id != user.id:
+        return []
+
     try:
         Subscription = apps.get_model("subscriptions", "Subscription")
-        return Subscription.objects.filter(customer=customer)
-    except (LookupError, Exception):
+        return list(Subscription.objects.filter(customer=customer))
+    except Exception as exc:
+        logger.warning("Could not query subscriptions for customer %s: %s", customer.pk, exc)
         return []
 
 
-def get_customer_invoices(customer: Customer):
+def get_customer_invoices(customer: Customer, user=None):
     """
-    Retrieves invoices for a customer if Member 4's billing app is active.
-    Gracefully falls back to empty list if unmigrated or uninitialized.
+    Retrieves invoices for a customer through subscription link, scoped by role.
+    Gracefully handles missing models/tables by returning empty list.
     """
+    if user and getattr(user, "is_customer_role", False) and customer.user_id != user.id:
+        return []
+
     try:
         Invoice = apps.get_model("billing", "Invoice")
-        return Invoice.objects.filter(customer=customer)
-    except (LookupError, Exception):
+        return list(
+            Invoice.objects.filter(subscription__customer=customer).select_related("subscription")
+        )
+    except Exception as exc:
+        logger.warning("Could not query invoices for customer %s: %s", customer.pk, exc)
         return []
 
 
-def get_customer_payments(customer: Customer):
+def get_customer_payments(customer: Customer, user=None):
     """
-    Retrieves payments for a customer if Member 4's payments app is active.
-    Gracefully falls back to empty list if unmigrated or uninitialized.
+    Retrieves payments for a customer through invoice link, scoped by role.
+    Gracefully handles missing models/tables by returning empty list.
     """
+    if user and getattr(user, "is_customer_role", False) and customer.user_id != user.id:
+        return []
+
     try:
         Payment = apps.get_model("payments", "Payment")
-        return Payment.objects.filter(customer=customer)
-    except (LookupError, Exception):
+        return list(
+            Payment.objects.filter(invoice__subscription__customer=customer).select_related("invoice")
+        )
+    except Exception as exc:
+        logger.warning("Could not query payments for customer %s: %s", customer.pk, exc)
         return []
