@@ -183,32 +183,50 @@ All URLs resolved by django.urls.get_resolver() across all integrated applicatio
 | Path Pattern | URL Name | Namespace | View / Callback | Auth / Access Requirement |
 | :--- | :--- | :--- | :--- | :--- |
 | / | dashboard | - | config.views.dashboard_view | Login required (Role-aware dashboard) |
-| ccounts/register/ | ccounts:register | ccounts | ccounts.views.register_view | Public / Anonymous |
-| ccounts/login/ | ccounts:login | ccounts | ccounts.views.login_view | Public (Rate-limited, max 5 attempts) |
-| ccounts/logout/ | ccounts:logout | ccounts | ccounts.views.logout_view | Login required |
-| ccounts/password_reset/ | ccounts:password_reset | ccounts | django.contrib.auth.views.PasswordResetView | Public |
-| ccounts/password_reset/done/ | ccounts:password_reset_done | ccounts | django.contrib.auth.views.PasswordResetDoneView | Public |
-| ccounts/reset/<uidb64>/<token>/ | ccounts:password_reset_confirm | ccounts | django.contrib.auth.views.PasswordResetConfirmView | Public |
-| ccounts/reset/done/ | ccounts:password_reset_complete | ccounts | django.contrib.auth.views.PasswordResetCompleteView | Public |
-| ccounts/password_change/ | ccounts:password_change | ccounts | django.contrib.auth.views.PasswordChangeView | Login required |
-| ccounts/password_change/done/ | ccounts:password_change_done | ccounts | django.contrib.auth.views.PasswordChangeDoneView | Login required |
-| ccounts/profile/ | ccounts:profile | ccounts | ccounts.views.profile_view | Login required |
-| ccounts/staff/create/ | ccounts:staff_create | ccounts | ccounts.views.staff_create_view | Admin only |
-| ccounts/users/ | ccounts:user_list | ccounts | ccounts.views.user_list_view | Admin only |
-| ccounts/users/<id>/toggle-active/ | ccounts:user_toggle_active | ccounts | ccounts.views.user_toggle_active_view | Admin only |
+| accounts/register/ | accounts:register | accounts | accounts.views.register_view | Public / Anonymous |
+| accounts/login/ | accounts:login | accounts | accounts.views.login_view | Public (Rate-limited, max 5 attempts) |
+| accounts/logout/ | accounts:logout | accounts | accounts.views.logout_view | Login required |
+| accounts/password_reset/ | accounts:password_reset | accounts | django.contrib.auth.views.PasswordResetView | Public |
+| accounts/password_reset/done/ | accounts:password_reset_done | accounts | django.contrib.auth.views.PasswordResetDoneView | Public |
+| accounts/reset/<uidb64>/<token>/ | accounts:password_reset_confirm | accounts | django.contrib.auth.views.PasswordResetConfirmView | Public |
+| accounts/reset/done/ | accounts:password_reset_complete | accounts | django.contrib.auth.views.PasswordResetCompleteView | Public |
+| accounts/password_change/ | accounts:password_change | accounts | django.contrib.auth.views.PasswordChangeView | Login required |
+| accounts/password_change/done/ | accounts:password_change_done | accounts | django.contrib.auth.views.PasswordChangeDoneView | Login required |
+| accounts/profile/ | accounts:profile | accounts | accounts.views.profile_view | Login required |
+| accounts/staff/create/ | accounts:staff_create | accounts | accounts.views.staff_create_view | Admin only |
+| accounts/users/ | accounts:user_list | accounts | accounts.views.user_list_view | Admin only |
+| accounts/users/<id>/toggle-active/ | accounts:user_toggle_active | accounts | accounts.views.user_toggle_active_view | Admin only |
 | customers/ | customers:list | customers | customers.views.customer_list_view | Login required (Staff/Admin all, Customer own) |
 | customers/create/ | customers:create | customers | customers.views.customer_create_view | Staff / Admin only |
 | customers/<pk>/ | customers:detail | customers | customers.views.customer_detail_view | Login required (Object-level IDOR check) |
 | customers/<pk>/edit/ | customers:edit | customers | customers.views.customer_edit_view | Login required (Staff/Admin or own profile) |
 | customers/<pk>/status/ | customers:status_toggle | customers | customers.views.customer_status_toggle_view | Staff / Admin only |
-| illing/ | illing:invoice_list | illing | illing.views.invoice_list_view | Login required (Scoped by role) |
-| illing/invoices/ | illing:invoice_list_invoices | illing | illing.views.invoice_list_view | Login required (Alias) |
-| illing/<pk>/ | illing:invoice_detail | illing | illing.views.invoice_detail_view | Login required (Scoped by role) |
-| illing/invoices/<pk>/ | illing:invoice_detail_invoices | illing | illing.views.invoice_detail_view | Login required (Alias) |
-| illing/<pk>/confirm/ | illing:invoice_confirm | illing | illing.views.confirm_invoice_view | Staff / Admin only |
-| illing/<pk>/cancel/ | illing:invoice_cancel | illing | illing.views.cancel_invoice_view | Staff / Admin only |
-| illing/<pk>/pdf/ | illing:invoice_pdf | illing | illing.views.invoice_pdf_view | Login required (Scoped by role) |
-| illing/invoices/<pk>/pdf/ | illing:invoice_pdf_alias | illing | illing.views.invoice_pdf_view | Login required (Alias) |
+| products/ | products:list, products:product_list | products | products.views.product_list_view | Public (Active products for Customers/Anonymous; All for Staff/Admin) |
+| products/create/ | products:create, products:product_create | products | products.views.product_create_view | Staff / Admin only |
+| products/<pk>/ | products:detail, products:product_detail | products | products.views.product_detail_view | Public / Active catalog |
+| products/<pk>/edit/ | products:edit, products:product_edit | products | products.views.product_edit_view | Staff / Admin only |
+| products/plans/ | products:plan_list | products | products.views.plan_list_view | Public / Active catalog |
+| products/plans/create/ | products:plan_create | products | products.views.plan_create_view | Staff / Admin only |
+| products/plans/<pk>/edit/ | products:plan_edit | products | products.views.plan_edit_view | Staff / Admin only |
+| products/variants/create/ | products:variant_create | products | products.views.variant_create_view | Staff / Admin only |
+| discounts/ | discounts:discount_list | discounts | discounts.views.discount_list_view | Staff / Admin only |
+| discounts/create/ | discounts:discount_create | discounts | discounts.views.discount_create_view | Staff / Admin only |
+| discounts/<pk>/edit/ | discounts:discount_edit | discounts | discounts.views.discount_edit_view | Staff / Admin only |
+| subscriptions/ | subscriptions:subscription_list | subscriptions | subscriptions.views.subscription_list_view | Login required (Staff/Admin all, Customer own) |
+| subscriptions/create/ | subscriptions:subscription_create | subscriptions | subscriptions.views.subscription_create_view | Staff / Admin only |
+| subscriptions/<pk>/ | subscriptions:subscription_detail | subscriptions | subscriptions.views.subscription_detail_view | Login required (Scoped by role) |
+| subscriptions/<pk>/edit/ | subscriptions:subscription_edit | subscriptions | subscriptions.views.subscription_edit_view | Staff / Admin only |
+| subscriptions/<pk>/confirm/ | subscriptions:subscription_confirm | subscriptions | subscriptions.views.subscription_confirm_view | Staff / Admin only (POST) |
+| subscriptions/<pk>/pause/ | subscriptions:subscription_pause | subscriptions | subscriptions.views.subscription_pause_view | Staff / Admin only (POST) |
+| subscriptions/<pk>/cancel/ | subscriptions:subscription_cancel | subscriptions | subscriptions.views.subscription_cancel_view | Staff / Admin only (POST) |
+| billing/ | billing:invoice_list | billing | billing.views.invoice_list_view | Login required (Scoped by role) |
+| billing/invoices/ | billing:invoice_list_invoices | billing | billing.views.invoice_list_view | Login required (Alias) |
+| billing/<pk>/ | billing:invoice_detail | billing | billing.views.invoice_detail_view | Login required (Scoped by role) |
+| billing/invoices/<pk>/ | billing:invoice_detail_invoices | billing | billing.views.invoice_detail_view | Login required (Alias) |
+| billing/<pk>/confirm/ | billing:invoice_confirm | billing | billing.views.confirm_invoice_view | Staff / Admin only |
+| billing/<pk>/cancel/ | billing:invoice_cancel | billing | billing.views.cancel_invoice_view | Staff / Admin only |
+| billing/<pk>/pdf/ | billing:invoice_pdf | billing | billing.views.invoice_pdf_view | Login required (Scoped by role) |
+| billing/invoices/<pk>/pdf/ | billing:invoice_pdf_alias | billing | billing.views.invoice_pdf_view | Login required (Alias) |
 | payments/ | payments:payment_list | payments | payments.views.payment_list_view | Login required (Scoped by role) |
 | payments/create/ | payments:payment_create | payments | payments.views.payment_create_view | Staff / Admin only |
 | payments/record/ | payments:payment_record | payments | payments.views.payment_create_view | Staff / Admin only (Alias) |

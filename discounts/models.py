@@ -29,10 +29,11 @@ class Discount(models.Model):
         default=Decimal("0.00"),
         validators=[MinValueValidator(Decimal("0.00"))],
     )
-    start_date = models.DateField(default=timezone.localdate)
+    start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
     usage_limit = models.PositiveIntegerField(null=True, blank=True)
     times_used = models.PositiveIntegerField(default=0)
+    usage_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -88,15 +89,12 @@ class Discount(models.Model):
 
     @property
     def times_redeemed(self):
-        return self.times_used
+        return self.usage_count
 
     @times_redeemed.setter
     def times_redeemed(self, val):
+        self.usage_count = val
         self.times_used = val
-
-    @property
-    def usage_count(self):
-        return self.times_used
 
     def clean_fields(self, exclude=None):
         if self.code:
@@ -127,5 +125,9 @@ class Discount(models.Model):
             self.code = self.code.strip().upper()
         if not self.name and self.code:
             self.name = self.code
+        if self.usage_count and not self.times_used:
+            self.times_used = self.usage_count
+        elif self.times_used and not self.usage_count:
+            self.usage_count = self.times_used
         self.full_clean()
         super().save(*args, **kwargs)

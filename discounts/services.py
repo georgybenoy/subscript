@@ -55,8 +55,8 @@ def is_discount_valid(
         return False
 
     # Validate usage cap
-    limit = discount.max_redemptions if discount.max_redemptions is not None else discount.usage_limit
-    times = discount.times_redeemed if discount.times_redeemed is not None else discount.times_used
+    limit = discount.usage_limit if discount.usage_limit is not None else discount.max_redemptions
+    times = max(getattr(discount, "times_used", 0) or 0, getattr(discount, "usage_count", 0) or 0)
     if limit is not None and times >= limit:
         return False
 
@@ -109,10 +109,12 @@ def apply_discount(discount: Discount) -> bool:
         return False
 
     Discount.objects.filter(pk=discount.pk).update(
-        times_used=F("times_used") + 1
+        times_used=F("times_used") + 1,
+        usage_count=F("usage_count") + 1,
     )
-    locked_discount.refresh_from_db(fields=["times_used"])
+    locked_discount.refresh_from_db(fields=["times_used", "usage_count"])
     discount.times_used = locked_discount.times_used
+    discount.usage_count = locked_discount.usage_count
     return True
 
 

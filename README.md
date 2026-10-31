@@ -69,6 +69,21 @@ Subscript is structured as a clean modular monolith where each application repre
 - **Invoices Tab**: Displays historical invoices, due dates, statuses, and total amounts.
 - **Payments Tab**: Displays immutable transaction receipts with reference numbers, payment methods, dates, and amounts.
 
+### 6. Products, Variants & Plans Catalog (`products/`)
+- **Product Offerings**: Support for SaaS licenses, services, add-ons, and devices.
+- **Tiered Variants**: Price adjustment deltas on base sales price with effective price computation.
+- **Billing Plans**: Weekly, monthly, quarterly, and annual intervals with minimum quantity validation and trial days.
+
+### 7. Coupons & Promotions Engine (`discounts/`)
+- **Dual Discount Logic**: Percentage discounts (capped at 100%) and fixed dollar discounts.
+- **Atomic Concurrency Protection**: Row locking via `select_for_update()` during redemption prevents race conditions.
+- **Validity Windows**: Enforces start/end date eligibility and maximum redemption caps.
+
+### 8. Subscriptions Lifecycle & Date Progression (`subscriptions/`)
+- **Full Lifecycle State Engine**: Draft, Quotation, Confirmed, Active, Paused, Cancelled, Expired, and Closed.
+- **Accurate Date Progression**: Safely advances calendar months with leap year and month-end pinning (e.g. Jan 31 -> Feb 28).
+- **Billing Due Lookups**: Optimally indexes and queries active agreements due for automated recurring invoicing.
+
 ---
 
 ## 🔐 Permission & Authorization Matrix
@@ -85,6 +100,15 @@ Subscript is structured as a clean modular monolith where each application repre
 | `/customers/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
 | `/customers/<pk>/` | 302 (Login) | 200 (Own) / **404 (Other)** | 200 (Any) | 200 (Any) |
 | `/customers/<pk>/status/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/products/` (Catalog) | 200 (Active) | 200 (Active) | 200 (All) | 200 (All) |
+| `/products/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/products/plans/` | 200 (Active) | 200 (Active) | 200 (All) | 200 (All) |
+| `/products/plans/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/discounts/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/discounts/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/subscriptions/` | 302 (Login) | 200 (Own Subs) | 200 (All) | 200 (All) |
+| `/subscriptions/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
+| `/subscriptions/<pk>/` | 302 (Login) | 200 (Own) / **404 (Other)** | 200 (Any) | 200 (Any) |
 | `/billing/` (Invoices) | 302 (Login) | 200 (Own Invoices) | 200 (All Invoices) | 200 (All Invoices) |
 | `/payments/` | 302 (Login) | 200 (Own Payments) | 200 (All Payments) | 200 (All Payments) |
 | `/payments/create/` | 302 (Login) | **403 Forbidden** | 200 | 200 |
