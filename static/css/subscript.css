@@ -128,6 +128,8 @@ a:hover {
   min-height: 100vh;
   position: relative;
   z-index: 1;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -272,12 +274,15 @@ a:hover {
 
 /* Main Content Area */
 .app-main {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
   margin-left: var(--sidebar-width);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   transition: margin-left var(--transition-normal);
+  overflow-x: hidden;
 }
 
 /* Top Navbar */
@@ -391,6 +396,8 @@ a:hover {
   box-shadow: var(--shadow-sm);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
 }
 .card-subscript:hover {
   border-color: rgba(167, 139, 250, 0.3);
@@ -403,6 +410,8 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .card-subscript .card-title {
@@ -887,6 +896,11 @@ a:hover {
   }
   .app-main {
     margin-left: 0;
+    width: 100%;
+    max-width: 100vw;
+  }
+  canvas {
+    max-width: 100% !important;
   }
   .page-content {
     padding: 1.25rem;

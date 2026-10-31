@@ -1,14 +1,24 @@
+from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 from django.db import transaction
-from django.db.models import F, Q
+from django.db.models import F, Q, QuerySet
 from django.utils import timezone
-from .models import Discount
+from .models import Discount, DiscountType
+
+
+def quantize_money(amount: Union[Decimal, float, int, str, None]) -> Decimal:
+    """Helper to ensure standard 2-decimal monetary representation."""
+    if amount is None:
+        return Decimal("0.00")
+    if not isinstance(amount, Decimal):
+        amount = Decimal(str(amount))
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 def validate_discount_code(
     code: Optional[str],
-    at_date: Optional[timezone.datetime] = None,
+    at_date: Optional[Union[datetime, date]] = None,
 ) -> Tuple[bool, Optional[Discount], str]:
     """
     Validates a discount code for eligibility against active status,
@@ -30,8 +40,10 @@ def validate_discount_code(
         return False, discount, f"Discount code '{clean_code}' is inactive."
 
     now = at_date or timezone.now()
+    if isinstance(now, date) and not isinstance(now, datetime):
+        now = timezone.make_aware(datetime.combine(now, datetime.min.time()))
 
-    if now < discount.valid_from:
+    if discount.valid_from and now < discount.valid_from:
         return False, discount, f"Discount code '{clean_code}' is not yet active."
 
     if discount.valid_until and now > discount.valid_until:
@@ -43,11 +55,24 @@ def validate_discount_code(
     return True, discount, f"Discount code '{clean_code}' is valid."
 
 
+def is_discount_valid(
+    discount: Optional[Discount],
+    on_date: Optional[Union[date, datetime]] = None,
+) -> bool:
+    """
+    Checks if a discount rule is currently valid and eligible for redemption.
+    """
+    if discount is None:
+        return False
+    is_valid, _, _ = validate_discount_code(discount.code, at_date=on_date)
+    return is_valid
+
+
 def get_applicable_discount(
     subscription=None,
     subtotal: Decimal = Decimal("0.00"),
     quantity: int = 1,
-    at_date: Optional[timezone.datetime] = None,
+    at_date: Optional[Union[datetime, date]] = None,
     discount: Optional[Discount] = None,
 ) -> Decimal:
     """
@@ -62,9 +87,7 @@ def get_applicable_discount(
     - FIXED: uses fixed amount.
     - Caps discount at subtotal (cannot produce a negative invoice total).
     - Never returns a negative amount.
-    - Preserves `quantity` in the interface without inventing un-documented eligibility rules.
     """
-    # 1. Resolve Discount instance
     resolved_discount = discount
     if resolved_discount is None and subscription is not None:
         resolved_discount = getattr(subscription, "discount", None)
@@ -72,7 +95,6 @@ def get_applicable_discount(
     if resolved_discount is None:
         return Decimal("0.00")
 
-    # 2. Convert and validate subtotal
     if not isinstance(subtotal, Decimal):
         try:
             subtotal = Decimal(str(subtotal))
@@ -82,12 +104,10 @@ def get_applicable_discount(
     if subtotal <= Decimal("0.00"):
         return Decimal("0.00")
 
-    # 3. Validate eligibility
     is_valid, _, _ = validate_discount_code(resolved_discount.code, at_date=at_date)
     if not is_valid:
         return Decimal("0.00")
 
-    # 4. Compute reduction based on discount_type
     if resolved_discount.discount_type == Discount.DiscountType.PERCENTAGE:
         raw_discount = subtotal * (resolved_discount.amount / Decimal("100.00"))
     elif resolved_discount.discount_type == Discount.DiscountType.FIXED:
@@ -95,10 +115,8 @@ def get_applicable_discount(
     else:
         return Decimal("0.00")
 
-    # 5. Round to 2 decimal places using ROUND_HALF_UP
-    discount_amount = raw_discount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    discount_amount = quantize_money(raw_discount)
 
-    # 6. Cap discount at subtotal and floor at 0.00
     if discount_amount > subtotal:
         discount_amount = subtotal
     if discount_amount < Decimal("0.00"):
@@ -107,14 +125,23 @@ def get_applicable_discount(
     return discount_amount
 
 
+def calculate_discount_amount(
+    discount: Optional[Discount],
+    subtotal: Decimal,
+    on_date: Optional[Union[date, datetime]] = None,
+) -> Decimal:
+    """Compatibility alias for get_applicable_discount."""
+    return get_applicable_discount(
+        discount=discount,
+        subtotal=subtotal,
+        at_date=on_date,
+    )
+
+
 def record_discount_redemption(discount: Optional[Discount]) -> bool:
     """
     Atomically records a confirmed redemption for a discount using F expressions.
-    Enforces active status, validity window, and max_redemptions atomically to prevent
-    concurrent race conditions.
-
-    Returns:
-        True if redemption was successfully committed (exactly 1 record updated); False otherwise.
+    Enforces active status, validity window, and max_redemptions atomically.
     """
     if discount is None or not getattr(discount, "pk", None):
         return False
@@ -139,3 +166,53 @@ def record_discount_redemption(discount: Optional[Discount]) -> bool:
             discount.refresh_from_db(fields=["times_redeemed"])
             return True
         return False
+
+
+def apply_discount(discount: Discount) -> bool:
+    """Compatibility wrapper around record_discount_redemption."""
+    return record_discount_redemption(discount)
+
+
+def get_subscription_discount(
+    subscription,
+    at_date: Optional[Union[date, datetime]] = None,
+) -> Optional[Discount]:
+    """Retrieves and validates any discount attached to a subscription."""
+    discount = getattr(subscription, "discount", None)
+    if discount and is_discount_valid(discount, on_date=at_date):
+        return discount
+    return None
+
+
+def search_and_filter_discounts(
+    queryset: QuerySet,
+    query: Optional[str] = None,
+    discount_type: Optional[str] = None,
+    status: Optional[str] = None,
+) -> QuerySet:
+    """Filters discount queryset for admin/staff management list."""
+    if query:
+        q = query.strip()
+        queryset = queryset.filter(code__icontains=q)
+
+    if discount_type:
+        dt = discount_type.strip().upper()
+        if dt in (DiscountType.PERCENTAGE, DiscountType.FIXED):
+            queryset = queryset.filter(discount_type=dt)
+
+    if status:
+        st = status.strip().lower()
+        now = timezone.now()
+        if st == "active":
+            queryset = queryset.filter(
+                is_active=True,
+                valid_from__lte=now,
+            ).filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=now)
+            )
+        elif st in ("expired", "inactive"):
+            queryset = queryset.filter(
+                Q(is_active=False) | Q(valid_until__lt=now)
+            )
+
+    return queryset

@@ -601,3 +601,64 @@ class ApplyEndpointTests(TestCase):
             )
         self.discount.refresh_from_db()
         self.assertEqual(self.discount.times_redeemed, initial_count)
+
+
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+
+class DiscountViewsSecurityTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(
+            email='admin@test.com', password='password123', role=User.Role.ADMIN
+        )
+        self.staff = User.objects.create_user(
+            email='staff@test.com', password='password123', role=User.Role.STAFF
+        )
+        self.customer = User.objects.create_user(
+            email='cust@test.com', password='password123', role=User.Role.CUSTOMER
+        )
+        self.discount = Discount.objects.create(
+            code='TEST10',
+            discount_type=Discount.DiscountType.PERCENTAGE,
+            amount=Decimal('10.00'),
+            valid_from=timezone.now(),
+        )
+
+    def test_anonymous_redirects_to_login(self):
+        resp = self.client.get(reverse('discounts:discount_list'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('/accounts/login/', resp.url)
+
+    def test_customer_denied_403(self):
+        self.client.force_login(self.customer)
+        resp = self.client.get(reverse('discounts:discount_list'))
+        self.assertEqual(resp.status_code, 403)
+
+        resp_create = self.client.get(reverse('discounts:discount_create'))
+        self.assertEqual(resp_create.status_code, 403)
+
+    def test_staff_admin_allowed_200(self):
+        self.client.force_login(self.staff)
+        resp = self.client.get(reverse('discounts:discount_list'))
+        self.assertEqual(resp.status_code, 200)
+
+        self.client.force_login(self.admin)
+        resp = self.client.get(reverse('discounts:discount_list'))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_create_discount_post(self):
+        self.client.force_login(self.admin)
+        resp = self.client.post(
+            reverse('discounts:discount_create'),
+            {
+                'code': 'PROMO2026',
+                'discount_type': Discount.DiscountType.PERCENTAGE,
+                'amount': '15.00',
+                'valid_from': str(timezone.localdate()),
+                'max_redemptions': '100',
+            },
+        )
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Discount.objects.filter(code='PROMO2026').exists())

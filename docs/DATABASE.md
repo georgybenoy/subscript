@@ -158,10 +158,10 @@ This document defines the authoritative database model contract for the **Subscr
   - `code`: `CharField(max_length=50, unique=True)`
   - `discount_type`: `CharField(max_length=20, choices=[PERCENTAGE, FIXED])`
   - `amount`: `DecimalField(max_digits=12, decimal_places=2)`
-  - `valid_from`: `DateTimeField()`
-  - `valid_until`: `DateTimeField(null=True, blank=True)`
-  - `max_redemptions`: `PositiveIntegerField(null=True, blank=True)`
-  - `times_redeemed`: `PositiveIntegerField(default=0)`
+  - `valid_from` / `start_date`: `DateField(null=True, blank=True)`
+  - `valid_until` / `end_date`: `DateField(null=True, blank=True)`
+  - `max_redemptions` / `usage_limit`: `PositiveIntegerField(null=True, blank=True)`
+  - `times_redeemed` / `times_used` / `usage_count`: `PositiveIntegerField(default=0)`
   - `is_active`: `BooleanField(default=True)`
   - `created_at`: `DateTimeField(auto_now_add=True)`
   - `updated_at`: `DateTimeField(auto_now=True)`
@@ -174,12 +174,17 @@ This document defines the authoritative database model contract for the **Subscr
 - Recurring agreement linking a Customer to a Plan.
 - **Fields**:
   - `id`: `BigAutoField` (PK)
+  - `subscription_number`: `CharField(max_length=100, unique=True)`
   - `customer`: `ForeignKey("customers.Customer", on_delete=models.PROTECT, related_name="subscriptions")`
-  - `plan`: `ForeignKey("products.Plan", on_delete=models.PROTECT, related_name="subscriptions")`
+  - `plan`: `ForeignKey("products.Plan", on_delete=models.PROTECT, null=True, blank=True, related_name="subscriptions")`
   - `discount`: `ForeignKey("discounts.Discount", on_delete=models.SET_NULL, null=True, blank=True, related_name="subscriptions")`
-  - `status`: `CharField(max_length=20, choices=[TRIALING, ACTIVE, PAST_DUE, CANCELED, PAUSED], default="ACTIVE")`
-  - `current_period_start`: `DateTimeField()`
-  - `current_period_end`: `DateTimeField()`
+  - `status`: `CharField(max_length=20, choices=[DRAFT, QUOTATION, CONFIRMED, ACTIVE, PAUSED, PAST_DUE, CANCELLED, EXPIRED, CLOSED], default="DRAFT")`
+  - `start_date`: `DateField(default=timezone.localdate)`
+  - `expiry_date`: `DateField(null=True, blank=True)`
+  - `next_billing_date`: `DateField(null=True, blank=True)`
+  - `payment_terms`: `PositiveIntegerField(default=15)`
+  - `current_period_start`: `DateField()`
+  - `current_period_end`: `DateField(null=True, blank=True)`
   - `cancel_at_period_end`: `BooleanField(default=False)`
   - `created_at`: `DateTimeField(auto_now_add=True)`
   - `updated_at`: `DateTimeField(auto_now=True)`
@@ -189,9 +194,12 @@ This document defines the authoritative database model contract for the **Subscr
 - **Fields**:
   - `id`: `BigAutoField` (PK)
   - `subscription`: `ForeignKey("subscriptions.Subscription", on_delete=models.CASCADE, related_name="items")`
-  - `variant`: `ForeignKey("products.ProductVariant", on_delete=models.PROTECT, null=True, blank=True, related_name="subscription_items")`
+  - `product`: `ForeignKey("products.Product", on_delete=models.SET_NULL, null=True, blank=True, related_name="subscription_items")`
+  - `variant`: `ForeignKey("products.ProductVariant", on_delete=models.SET_NULL, null=True, blank=True, related_name="subscription_items")`
+  - `description`: `CharField(max_length=255, blank=True)`
   - `quantity`: `PositiveIntegerField(default=1)`
   - `unit_price`: `DecimalField(max_digits=12, decimal_places=2)`
+  - `tax_rate`: `DecimalField(max_digits=5, decimal_places=2, default=0.00)`
 
 ---
 

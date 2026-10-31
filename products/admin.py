@@ -5,19 +5,19 @@ from .models import Plan, Product, ProductVariant
 class ProductVariantInline(admin.TabularInline):
     model = ProductVariant
     extra = 0
-    fields = ("name", "sku", "price", "is_active")
+    fields = ("name", "sku", "value", "price", "price_adjustment", "is_active")
 
 
 class PlanInline(admin.TabularInline):
     model = Plan
     extra = 0
-    fields = ("name", "code", "billing_interval", "price", "currency", "trial_days", "is_active")
+    fields = ("name", "code", "billing_interval", "price", "base_price", "minimum_quantity", "currency", "trial_days", "is_active")
 
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "is_active", "variant_count", "plan_count", "created_at", "updated_at")
-    list_filter = ("is_active", "created_at")
+    list_display = ("name", "product_type", "sales_price", "cost_price", "is_active", "variant_count", "plan_count", "created_at")
+    list_filter = ("product_type", "is_active", "created_at")
     search_fields = ("name", "description")
     inlines = [ProductVariantInline, PlanInline]
     ordering = ("-created_at",)
@@ -33,7 +33,7 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(ProductVariant)
 class ProductVariantAdmin(admin.ModelAdmin):
-    list_display = ("name", "sku", "product", "price", "is_active", "created_at")
+    list_display = ("name", "sku", "product", "price", "price_adjustment", "is_active", "created_at")
     list_filter = ("is_active", "product", "created_at")
     search_fields = ("name", "sku", "product__name")
     ordering = ("-created_at",)
@@ -47,6 +47,8 @@ class PlanAdmin(admin.ModelAdmin):
         "product",
         "billing_interval",
         "price",
+        "base_price",
+        "minimum_quantity",
         "currency",
         "trial_days",
         "is_active",

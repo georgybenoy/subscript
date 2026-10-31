@@ -8,8 +8,13 @@
 <!-- Page Header -->
 <div class="page-header">
     <div>
+        {% if is_customer %}
+        <h1 class="page-title">Welcome, {% if customer %}{{ customer.name|default:customer.company_name }}{% else %}{{ request.user.email }}{% endif %}</h1>
+        <p class="page-subtitle">Manage your active subscriptions, invoices, and billing statements</p>
+        {% else %}
         <h1 class="page-title">Executive Overview</h1>
         <p class="page-subtitle">Unified subscription lifecycle, recurring billing and revenue health</p>
+        {% endif %}
     </div>
     <div class="d-flex align-items-center gap-2">
         {% if is_admin or is_staff or not is_customer %}

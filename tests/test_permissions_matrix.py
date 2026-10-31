@@ -12,45 +12,17 @@ Verifies access control across all roles:
 from decimal import Decimal
 from unittest.mock import patch
 from django.contrib.auth import get_user_model
-from django.db import connection
 from django.test import TestCase, Client
 from django.urls import reverse
+
 from customers.models import Customer
+from products.models import Product, Plan
+from subscriptions.models import Subscription, SubscriptionStatus
 
 User = get_user_model()
 
 
 class PermissionMatrixTests(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # Ensure prerequisite tables exist for Member 3's pending subscription models
-        with connection.cursor() as cursor:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS subscriptions_subscription (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    subscription_number VARCHAR(100) NOT NULL UNIQUE,
-                    customer_id BIGINT NOT NULL,
-                    plan_id BIGINT,
-                    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-                    start_date DATE NOT NULL,
-                    expiry_date DATE,
-                    next_billing_date DATE,
-                    payment_terms INTEGER NOT NULL DEFAULT 15
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS subscriptions_subscriptionitem (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    subscription_id BIGINT NOT NULL,
-                    product_id BIGINT,
-                    description VARCHAR(255) NOT NULL DEFAULT '',
-                    quantity INTEGER NOT NULL DEFAULT 1,
-                    unit_price DECIMAL(12, 2) NOT NULL DEFAULT '0.00',
-                    tax_rate DECIMAL(5, 2) NOT NULL DEFAULT '0.00'
-                )
-            """)
-
     @classmethod
     def setUpTestData(cls):
         # 1. Admin
@@ -69,45 +41,66 @@ class PermissionMatrixTests(TestCase):
             first_name="Staff",
             last_name="User",
             role=User.Role.STAFF,
-            is_staff=True,
         )
 
         # 3. Customer A
         cls.cust_user_a = User.objects.create_user(
             email="perm_cust_a@subscript.local",
             password="CustomerPassword123!",
-            first_name="Alice",
-            last_name="Customer",
+            first_name="Customer",
+            last_name="Alpha",
             role=User.Role.CUSTOMER,
         )
         cls.customer_a = Customer.objects.create(
             user=cls.cust_user_a,
-            name="Alice Customer",
-            company_name="Acme Corp",
-            email="alice@acme.com",
-            billing_address="100 First St",
-            city="New York",
-            state="NY",
-            country="US",
+            name="Alpha Corp",
+            email="alpha@example.com",
+            billing_address="100 Alpha Way",
+            city="Metropolis",
+            country="IN",
+            tax_id="GST-ALPHA-01",
+            is_active=True,
         )
 
         # 4. Customer B
         cls.cust_user_b = User.objects.create_user(
             email="perm_cust_b@subscript.local",
             password="CustomerPassword123!",
-            first_name="Bob",
-            last_name="Customer",
+            first_name="Customer",
+            last_name="Beta",
             role=User.Role.CUSTOMER,
         )
         cls.customer_b = Customer.objects.create(
             user=cls.cust_user_b,
-            name="Bob Customer",
-            company_name="Beta LLC",
-            email="bob@beta.com",
-            billing_address="200 Second St",
-            city="San Francisco",
-            state="CA",
-            country="US",
+            name="Beta Ltd",
+            email="beta@example.com",
+            billing_address="200 Beta Road",
+            city="Gotham",
+            country="IN",
+            tax_id="GST-BETA-02",
+            is_active=True,
+        )
+
+        # 5. Sample Catalog & Subscriptions
+        cls.prod = Product.objects.create(name="Matrix SaaS", sales_price=Decimal("99.00"))
+        cls.plan = Plan.objects.create(
+            product=cls.prod,
+            name="Matrix Monthly",
+            code="PLAN-PERM-M",
+            price=Decimal("99.00"),
+            base_price=Decimal("99.00"),
+        )
+        cls.sub_a = Subscription.objects.create(
+            subscription_number="SUB-PERM-A",
+            customer=cls.customer_a,
+            plan=cls.plan,
+            status=SubscriptionStatus.ACTIVE,
+        )
+        cls.sub_b = Subscription.objects.create(
+            subscription_number="SUB-PERM-B",
+            customer=cls.customer_b,
+            plan=cls.plan,
+            status=SubscriptionStatus.ACTIVE,
         )
 
     def setUp(self):
@@ -125,13 +118,15 @@ class PermissionMatrixTests(TestCase):
     # 1. ANONYMOUS USER ACCESS
     # ==========================================================================
     def test_anonymous_public_routes_return_200(self):
-        """Public authentication endpoints must return 200 for anonymous users."""
+        """Public authentication and catalog endpoints must return 200 for anonymous users."""
         public_urls = [
             reverse("accounts:login"),
             reverse("accounts:register"),
             reverse("accounts:password_reset"),
             reverse("accounts:password_reset_done"),
             reverse("accounts:password_reset_complete"),
+            reverse("products:product_list"),
+            reverse("products:plan_list"),
         ]
         for url in public_urls:
             with self.subTest(url=url):
@@ -149,6 +144,12 @@ class PermissionMatrixTests(TestCase):
             reverse("customers:list"),
             reverse("customers:create"),
             reverse("customers:detail", kwargs={"pk": self.customer_a.pk}),
+            reverse("products:product_create"),
+            reverse("products:plan_create"),
+            reverse("discounts:discount_list"),
+            reverse("discounts:discount_create"),
+            reverse("subscriptions:subscription_list"),
+            reverse("subscriptions:subscription_create"),
             reverse("billing:invoice_list"),
             reverse("payments:payment_list"),
             reverse("payments:payment_create"),
@@ -170,6 +171,11 @@ class PermissionMatrixTests(TestCase):
             reverse("accounts:staff_create"),
             reverse("accounts:user_list"),
             reverse("customers:create"),
+            reverse("products:product_create"),
+            reverse("products:plan_create"),
+            reverse("discounts:discount_list"),
+            reverse("discounts:discount_create"),
+            reverse("subscriptions:subscription_create"),
             reverse("payments:payment_create"),
             reverse("analytics:dashboard"),
             reverse("analytics:data"),
@@ -180,7 +186,7 @@ class PermissionMatrixTests(TestCase):
                 self.assertEqual(res.status_code, 403)
 
     def test_customer_can_access_own_portal_routes(self):
-        """Customer can access own dashboard, profile, customer detail, and directories."""
+        """Customer can access own dashboard, profile, customer detail, catalog, and directories."""
         res_dash = self.cust_client_a.get(reverse("dashboard"))
         self.assertEqual(res_dash.status_code, 200)
 
@@ -194,6 +200,17 @@ class PermissionMatrixTests(TestCase):
             reverse("customers:detail", kwargs={"pk": self.customer_a.pk})
         )
         self.assertEqual(res_cust_detail.status_code, 200)
+
+        res_prod_list = self.cust_client_a.get(reverse("products:product_list"))
+        self.assertEqual(res_prod_list.status_code, 200)
+
+        res_sub_list = self.cust_client_a.get(reverse("subscriptions:subscription_list"))
+        self.assertEqual(res_sub_list.status_code, 200)
+
+        res_sub_detail = self.cust_client_a.get(
+            reverse("subscriptions:subscription_detail", kwargs={"pk": self.sub_a.pk})
+        )
+        self.assertEqual(res_sub_detail.status_code, 200)
 
         res_billing = self.cust_client_a.get(reverse("billing:invoice_list"))
         self.assertEqual(res_billing.status_code, 200)
@@ -229,6 +246,14 @@ class PermissionMatrixTests(TestCase):
             reverse("customers:list"),
             reverse("customers:create"),
             reverse("customers:detail", kwargs={"pk": self.customer_a.pk}),
+            reverse("products:product_list"),
+            reverse("products:product_create"),
+            reverse("products:plan_list"),
+            reverse("products:plan_create"),
+            reverse("discounts:discount_list"),
+            reverse("discounts:discount_create"),
+            reverse("subscriptions:subscription_list"),
+            reverse("subscriptions:subscription_create"),
             reverse("billing:invoice_list"),
             reverse("payments:payment_list"),
             reverse("payments:payment_create"),
@@ -254,6 +279,14 @@ class PermissionMatrixTests(TestCase):
             reverse("customers:create"),
             reverse("customers:detail", kwargs={"pk": self.customer_a.pk}),
             reverse("customers:detail", kwargs={"pk": self.customer_b.pk}),
+            reverse("products:product_list"),
+            reverse("products:product_create"),
+            reverse("products:plan_list"),
+            reverse("products:plan_create"),
+            reverse("discounts:discount_list"),
+            reverse("discounts:discount_create"),
+            reverse("subscriptions:subscription_list"),
+            reverse("subscriptions:subscription_create"),
             reverse("billing:invoice_list"),
             reverse("payments:payment_list"),
             reverse("payments:payment_create"),
@@ -281,6 +314,13 @@ class PermissionMatrixTests(TestCase):
             reverse("customers:edit", kwargs={"pk": self.customer_b.pk})
         )
         self.assertEqual(res_b_edit.status_code, 404)
+
+    def test_customer_cannot_access_other_customer_subscription_detail(self):
+        """Customer A accessing Customer B's subscription detail must return 404 (IDOR defense)."""
+        res_b_sub = self.cust_client_a.get(
+            reverse("subscriptions:subscription_detail", kwargs={"pk": self.sub_b.pk})
+        )
+        self.assertEqual(res_b_sub.status_code, 404)
 
     def test_customer_cannot_toggle_customer_status(self):
         """Customer cannot toggle active/inactive status of any customer (403)."""
