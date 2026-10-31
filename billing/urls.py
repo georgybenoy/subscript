@@ -1,5 +1,12 @@
 from django.urls import path
+from . import views
 
 app_name = "billing"
 
-urlpatterns = []
+urlpatterns = [
+    # Directory & Detail
+    path("", views.invoice_list_view, name="invoice_list"),
+    path("invoices/", views.invoice_list_view, name="invoice_list_invoices"),
+    path("<int:pk>/", views.invoice_detail_view, name="invoice_detail"),
+    path("invoices/<int:pk>/", views.invoice_detail_view, name="invoice_detail_invoices"),
+]

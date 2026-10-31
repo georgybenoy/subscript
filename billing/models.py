@@ -249,17 +249,29 @@ class Invoice(models.Model):
 
     @property
     def paid_amount(self) -> Decimal:
-        """Calculates total settled payments against this invoice."""
+        """Calculates total settled payments against this invoice or reads annotation."""
+        if hasattr(self, "_paid_amount_annotated") and self._paid_amount_annotated is not None:
+            return quantize_money(self._paid_amount_annotated)
         if not self.pk:
             return Decimal("0.00")
         total_paid = sum((p.amount for p in self.payments.all()), Decimal("0.00"))
         return quantize_money(total_paid)
 
+    @paid_amount.setter
+    def paid_amount(self, value):
+        self._paid_amount_annotated = value
+
     @property
     def outstanding_balance(self) -> Decimal:
-        """Calculates current remaining balance due."""
+        """Calculates current remaining balance due or reads annotation."""
+        if hasattr(self, "_outstanding_annotated") and self._outstanding_annotated is not None:
+            return quantize_money(max(Decimal("0.00"), self._outstanding_annotated))
         remaining = self.total_amount - self.paid_amount
         return quantize_money(max(Decimal("0.00"), remaining))
+
+    @outstanding_balance.setter
+    def outstanding_balance(self, value):
+        self._outstanding_annotated = value
 
     @property
     def is_overdue(self) -> bool:
