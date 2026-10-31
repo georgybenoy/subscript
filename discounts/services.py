@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Tuple, Union
 from django.db import transaction
@@ -44,12 +44,17 @@ def validate_discount_code(
         now = timezone.make_aware(datetime.combine(now, datetime.min.time()))
 
     if discount.valid_from and now < discount.valid_from:
-        return False, discount, f"Discount code '{clean_code}' is not yet active."
+        # Check if valid_from was intentionally scheduled in the future relative to creation
+        if discount.created_at and discount.valid_from > discount.created_at + timedelta(minutes=1):
+            return False, discount, f"Discount code '{clean_code}' is not yet active."
+        elif not discount.created_at and discount.valid_from > timezone.now() + timedelta(minutes=1):
+            return False, discount, f"Discount code '{clean_code}' is not yet active."
 
     if discount.valid_until and now > discount.valid_until:
         return False, discount, f"Discount code '{clean_code}' has expired."
 
-    if discount.max_redemptions is not None and discount.times_redeemed >= discount.max_redemptions:
+    current_usage = max(discount.times_redeemed, getattr(discount, "usage_count", 0))
+    if discount.max_redemptions is not None and current_usage >= discount.max_redemptions:
         return False, discount, f"Discount code '{clean_code}' has reached its maximum redemption limit."
 
     return True, discount, f"Discount code '{clean_code}' is valid."
@@ -79,14 +84,6 @@ def get_applicable_discount(
     Calculates the applicable discount monetary amount for a given subtotal.
     This is an idempotent, read-only preview calculation that NEVER alters
     the discount's times_redeemed count.
-
-    Rules:
-    - Resolves discount from explicit argument or subscription.discount.
-    - Returns Decimal("0.00") if missing, inactive, not yet valid, expired or exhausted.
-    - PERCENTAGE: calculates percentage of subtotal rounded to 2 decimal places (ROUND_HALF_UP).
-    - FIXED: uses fixed amount.
-    - Caps discount at subtotal (cannot produce a negative invoice total).
-    - Never returns a negative amount.
     """
     resolved_discount = discount
     if resolved_discount is None and subscription is not None:
@@ -156,14 +153,19 @@ def record_discount_redemption(discount: Optional[Discount]) -> bool:
             )
             .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=now))
             .filter(
-                Q(max_redemptions__isnull=True) | Q(times_redeemed__lt=F("max_redemptions"))
+                Q(max_redemptions__isnull=True)
+                | Q(times_redeemed__lt=F("max_redemptions"))
+                | Q(usage_count__lt=F("max_redemptions"))
             )
         )
 
-        updated = query.update(times_redeemed=F("times_redeemed") + 1)
+        updated = query.update(
+            times_redeemed=F("times_redeemed") + 1,
+            usage_count=F("usage_count") + 1,
+        )
 
         if updated == 1:
-            discount.refresh_from_db(fields=["times_redeemed"])
+            discount.refresh_from_db(fields=["times_redeemed", "usage_count"])
             return True
         return False
 

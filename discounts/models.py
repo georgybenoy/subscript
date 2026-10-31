@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -31,6 +31,7 @@ class Discount(models.Model):
     valid_until = models.DateTimeField(null=True, blank=True)
     max_redemptions = models.PositiveIntegerField(null=True, blank=True)
     times_redeemed = models.PositiveIntegerField(default=0)
+    usage_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -111,19 +112,12 @@ class Discount(models.Model):
 
     @property
     def times_used(self) -> int:
-        return self.times_redeemed
+        return max(self.times_redeemed, self.usage_count)
 
     @times_used.setter
     def times_used(self, val: int):
         self.times_redeemed = val
-
-    @property
-    def usage_count(self) -> int:
-        return self.times_redeemed
-
-    @usage_count.setter
-    def usage_count(self, val: int):
-        self.times_redeemed = val
+        self.usage_count = val
 
     def clean_fields(self, exclude=None):
         if self.code:
@@ -158,6 +152,10 @@ class Discount(models.Model):
             self.code = self.code.strip().upper()
         if self.valid_from is None:
             self.valid_from = timezone.now()
+        if self.usage_count and not self.times_redeemed:
+            self.times_redeemed = self.usage_count
+        elif self.times_redeemed and not self.usage_count:
+            self.usage_count = self.times_redeemed
         super().save(*args, **kwargs)
 
 
