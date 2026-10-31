@@ -1,46 +1,86 @@
-# Subscript Multi-Member Collaboration Workflow
+# Subscript Team Collaboration & Git Workflow
 
-This document records the ownership agreements, placeholder management, and branch workflow for the **Subscript** modular Django monolith platform.
+This document establishes the official collaboration rules, branching model, pull-request ordering, and migration safety protocols for the Make-a-ton hackathon.
 
 ---
 
-## 1. Domain & Codebase Ownership
+## 1. Branching Strategy
 
-| Member | Domain & Modules | Allowed Actions by Other Members |
+| Branch | Description | Policy |
 | :--- | :--- | :--- |
-| **Backend Lead (You)** | `config/`, `accounts/`, `customers/`, `docs/`, shared settings, core permissions | Read-only. Other members must not alter models or auth rules. |
-| **Member 2** | `templates/`, `static/`, UI integration, styling | Other members create only bare-bones placeholder templates required to boot & test functional views. Marked with `<!-- PLACEHOLDER - owned by Member 2 -->`. |
-| **Member 3** | `products/`, `subscriptions/`, `discounts/` | Lead created bare skeletons (`apps.py`, empty `models.py`, `urls.py`, `views.py`). Member 3 implements plans, catalog, subscriptions, coupons. |
-| **Member 4** | `billing/`, `payments/`, `analytics/` | Lead created bare skeletons. Member 4 implements invoice calculations, payment integrations, and reporting. |
+| `main` | Production-ready baseline | **Protected**. Never push directly. Merges only via reviewed Pull Requests. |
+| `feature/accounts-customers` | Auth, Identity, Customer registry, Core settings | Owned by **Backend Lead**. First branch in PR merge sequence. |
+| `feature/ui-templates` | Bootstrap 5 layout, HTMX interactions, visual styling | Owned by **Member 2**. |
+| `feature/products-subscriptions`| Catalog, pricing plans, subscriptions, coupons | Owned by **Member 3**. |
+| `feature/billing-payments-analytics`| Invoices, ReportLab PDF export, payment records, analytics | Owned by **Member 4**. |
 
 ---
 
-## 2. Shared Contracts & Rules
+## 2. PR & Merge Sequence
 
-1. **Money Calculations**:
-   - `models.DecimalField(max_digits=12, decimal_places=2)` for all monetary values.
-2. **Cross-App Foreign Keys**:
-   - String references only (e.g. `"customers.Customer"`, `settings.AUTH_USER_MODEL`). Never direct model imports between apps.
-3. **Backend-Enforced Authorization**:
-   - Never rely on hiding UI buttons. Enforce role checks in `accounts/permissions.py` (`@admin_required`, `@staff_or_admin_required`, `@customer_required`).
-4. **Service Layer Isolation**:
-   - Keep business logic in `services.py` inside each app.
-   - Views handle only HTTP parsing, form submission, and redirection.
-5. **Secrets & Environment**:
-   - Sensitive credentials loaded via `.env` (gitignored).
-   - `.env.example` committed to git.
+To prevent merge and migration dependency cycles, integration into `main` follows this strict order:
+1. **Merge `feature/accounts-customers` first**:
+   - Establishes `AUTH_USER_MODEL`, `accounts.User`, `customers.Customer`, permissions, and project foundation.
+2. **Rebase feature branches on latest `main`**:
+   - `git fetch origin`
+   - `git rebase origin/main`
+3. **Merge `feature/products-subscriptions`**:
+   - Introduces products, plans, and subscriptions depending on `customers.Customer`.
+4. **Merge `feature/billing-payments-analytics`**:
+   - Introduces invoices and payments depending on `customers.Customer` and `subscriptions.Subscription`.
+5. **Merge `feature/ui-templates`**:
+   - Polishes all templates, replaces bare functional placeholders, and injects final branding.
 
 ---
 
-## 3. Template Placeholder Notice (Member 2 Ownership)
+## 3. Commit Message Conventions
 
-The following templates were provided as minimal functional placeholders with Bootstrap 5 CDN and standard block hooks to enable automated testing and user auth:
-- `templates/base.html`
-- `templates/dashboard.html`
-- `templates/accounts/login.html`
-- `templates/accounts/register.html`
-- `templates/accounts/profile.html`
-- `templates/accounts/staff_create.html`
-- `templates/accounts/user_list.html`
+Commit messages must use standard semantic prefixes:
+- `feat:` A new feature or capability (e.g. `feat: add customer filtering`).
+- `fix:` A bug fix or access patch (e.g. `fix: prevent IDOR on customer update`).
+- `docs:` Documentation updates only (e.g. `docs: add database schema diagram`).
+- `test:` Adding or updating unit tests (e.g. `test: verify login rate limiting`).
+- `chore:` Configuration, environment, or dependency adjustments (e.g. `chore: update requirements`).
 
-Member 2 is responsible for final UI styling, HTMX interactive widgets, custom brand assets, and mobile responsive polishing.
+---
+
+## 4. Pull-Before-Push & Conflict Resolution
+
+1. **Pull before push**:
+   - Always run `git pull --rebase origin <branch>` before pushing your branch to remote.
+2. **Never push broken code without documenting the issue**:
+   - All tests (`python manage.py test`) and system checks (`python manage.py check`) MUST pass before pushing.
+   - If a blocker arises, document the issue clearly in commit notes or team chat before pushing.
+
+---
+
+## 5. Database Migration Rules
+
+1. **App-Specific Migrations Only**:
+   - Run `python manage.py makemigrations <your_app>`. Never run `makemigrations` without an app name.
+2. **Never Edit Other Members' Migrations**:
+   - Do NOT edit, delete, or squash migration files created by teammates.
+3. **Conflict Resolution**:
+   - If two branches create competing migrations in the same app, resolve via:
+     `python manage.py makemigrations --merge <app_name>`
+   - Coordinate with the app owner before committing the merge migration.
+
+---
+
+## 6. File & Directory Ownership Matrix
+
+| Directory / Files | Primary Owner | Read / Write Rules for Others |
+| :--- | :--- | :--- |
+| `config/` | Backend Lead | Shared configuration. Coordinate before changing middleware or base settings. |
+| `accounts/` | Backend Lead | Read-only. Auth and permissions logic. |
+| `customers/` | Backend Lead | Read-only. Call via `customers.services`. |
+| `templates/accounts/` | Member 2 | Functional placeholders created by Lead; Member 2 owns final markup & styling. |
+| `templates/customers/` | Member 2 | Functional placeholders created by Lead; Member 2 owns final markup & styling. |
+| `templates/base.html` | Member 2 | Core layout. Contains `{% block content %}` and HTMX CSRF headers. |
+| `products/` | Member 3 | Member 3 exclusive. |
+| `subscriptions/` | Member 3 | Member 3 exclusive. |
+| `discounts/` | Member 3 | Member 3 exclusive. |
+| `billing/` | Member 4 | Member 4 exclusive. |
+| `payments/` | Member 4 | Member 4 exclusive. |
+| `analytics/` | Member 4 | Member 4 exclusive. |
+| `docs/` | Backend Lead | Authoritative project documentation & contracts. |
