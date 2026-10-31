@@ -6,12 +6,16 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 
 from django.contrib import admin
+from django.http import HttpResponse
 from django.urls import include, path
 from . import views
 
 urlpatterns = [
     # Administration
     path("admin/", admin.site.urls),
+
+    # Favicon endpoint
+    path("favicon.ico", lambda request: HttpResponse(b"", content_type="image/x-icon")),
 
     # Dashboard root
     path("", views.dashboard_view, name="dashboard"),
