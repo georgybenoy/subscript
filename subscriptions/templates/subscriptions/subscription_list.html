@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Subscriptions - Subscript{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-7">
+        <h3 class="mb-1">Subscription Management</h3>
+        <p class="text-muted small mb-0">Active subscription agreements, recurring billing cycles, and status controls.</p>
+    </div>
+    <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        <span class="badge bg-secondary p-2">Member 3 Domain: subscriptions/</span>
+    </div>
+</div>
+
+<!-- Status Filter Pills -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body p-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <span class="text-muted small fw-semibold me-2">Status:</span>
+            <a href="{% url 'subscriptions:list' %}"
+               class="btn btn-sm {% if not selected_status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                All
+            </a>
+            <a href="{% url 'subscriptions:list' %}?status=ACTIVE"
+               class="btn btn-sm {% if selected_status == 'ACTIVE' %}btn-success{% else %}btn-outline-success{% endif %}">
+                Active
+            </a>
+            <a href="{% url 'subscriptions:list' %}?status=TRIALING"
+               class="btn btn-sm {% if selected_status == 'TRIALING' %}btn-info text-dark{% else %}btn-outline-info{% endif %}">
+                Trialing
+            </a>
+            <a href="{% url 'subscriptions:list' %}?status=PAUSED"
+               class="btn btn-sm {% if selected_status == 'PAUSED' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">
+                Paused
+            </a>
+            <a href="{% url 'subscriptions:list' %}?status=PAST_DUE"
+               class="btn btn-sm {% if selected_status == 'PAST_DUE' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+                Past Due
+            </a>
+            <a href="{% url 'subscriptions:list' %}?status=CANCELED"
+               class="btn btn-sm {% if selected_status == 'CANCELED' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">
+                Canceled
+            </a>
+            {% if selected_status %}
+                <a href="{% url 'subscriptions:list' %}" class="btn btn-sm btn-link text-decoration-none ms-auto">Clear Filter</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Subscriptions Table -->
+<div class="card shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Subscription / Plan</th>
+                    <th>Customer</th>
+                    <th>Interval</th>
+                    <th>Billing Period</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for subscription in subscriptions %}
+                    <tr>
+                        <td>
+                            <div class="fw-bold">
+                                <a href="{% url 'subscriptions:detail' subscription.pk %}" class="text-decoration-none text-dark">
+                                    {{ subscription.plan.name }}
+                                </a>
+                            </div>
+                            <small class="text-muted">{{ subscription.plan.code }} &bull; #{{ subscription.id }}</small>
+                            {% if subscription.cancel_at_period_end %}
+                                <div><span class="badge bg-warning text-dark small mt-1">Cancels at Period End</span></div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ subscription.customer.name }}</div>
+                            <small class="text-muted">{{ subscription.customer.email }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ subscription.plan.get_billing_interval_display }}</span>
+                        </td>
+                        <td>
+                            <div>{{ subscription.current_period_start|date:"M d, Y" }} &ndash; {{ subscription.current_period_end|date:"M d, Y" }}</div>
+                            {% if subscription.paused_at %}
+                                <small class="text-warning">Paused: {{ subscription.paused_at|date:"M d, Y H:i" }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="fw-bold">{{ subscription.plan.currency }} {{ subscription.get_total }}</div>
+                            {% if subscription.get_discount_amount > 0 %}
+                                <small class="text-success">
+                                    <del>{{ subscription.plan.currency }} {{ subscription.get_subtotal }}</del>
+                                    (-{{ subscription.plan.currency }} {{ subscription.get_discount_amount }})
+                                </small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if subscription.status == "ACTIVE" %}
+                                <span class="badge bg-success">Active</span>
+                            {% elif subscription.status == "TRIALING" %}
+                                <span class="badge bg-info text-dark">Trialing</span>
+                            {% elif subscription.status == "PAUSED" %}
+                                <span class="badge bg-warning text-dark">Paused</span>
+                            {% elif subscription.status == "PAST_DUE" %}
+                                <span class="badge bg-danger">Past Due</span>
+                            {% elif subscription.status == "CANCELED" %}
+                                <span class="badge bg-secondary">Canceled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ subscription.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'subscriptions:detail' subscription.pk %}" class="btn btn-outline-primary">View</a>
+
+                                {% if subscription.status == "ACTIVE" %}
+                                    <form method="post" action="{% url 'subscriptions:pause' subscription.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-warning" onclick="return confirm('Pause this subscription?');">Pause</button>
+                                    </form>
+                                    <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="immediate" value="false">
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Schedule cancellation at period end?');">Cancel</button>
+                                    </form>
+                                {% elif subscription.status == "PAUSED" %}
+                                    <form method="post" action="{% url 'subscriptions:resume' subscription.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success" onclick="return confirm('Resume this subscription?');">Resume</button>
+                                    </form>
+                                    <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="immediate" value="true">
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel this paused subscription immediately?');">Cancel</button>
+                                    </form>
+                                {% elif subscription.status == "TRIALING" %}
+                                    <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="immediate" value="true">
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Cancel trial subscription?');">Cancel</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <div class="text-muted">
+                                <h5 class="mb-2">No Subscriptions Found</h5>
+                                {% if selected_status %}
+                                    <p class="mb-2 small">No subscriptions match the status filter "<strong>{{ selected_status }}</strong>".</p>
+                                    <a href="{% url 'subscriptions:list' %}" class="btn btn-outline-secondary btn-sm">Clear Status Filter</a>
+                                {% else %}
+                                    <p class="mb-0 small">No subscriptions have been created yet. Subscriptions will appear here once customers enroll in a plan.</p>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

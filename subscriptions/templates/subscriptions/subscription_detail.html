@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Subscription #{{ subscription.id }} - Subscript{% endblock %}
+
+{% block content %}
+<div class="row align-items-center mb-4">
+    <div class="col-md-7">
+        <h3 class="mb-1">Subscription #{{ subscription.id }}</h3>
+        <p class="text-muted mb-0">
+            <span class="fw-semibold">{{ subscription.customer.name }}</span> &bull;
+            {{ subscription.plan.name }} &bull;
+            {% if subscription.status == "ACTIVE" %}
+                <span class="badge bg-success">Active</span>
+            {% elif subscription.status == "TRIALING" %}
+                <span class="badge bg-info text-dark">Trialing</span>
+            {% elif subscription.status == "PAUSED" %}
+                <span class="badge bg-warning text-dark">Paused</span>
+            {% elif subscription.status == "PAST_DUE" %}
+                <span class="badge bg-danger">Past Due</span>
+            {% elif subscription.status == "CANCELED" %}
+                <span class="badge bg-secondary">Canceled</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ subscription.status }}</span>
+            {% endif %}
+            {% if subscription.cancel_at_period_end %}
+                <span class="badge bg-warning text-dark ms-1">Cancels at Period End</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="col-md-5 text-md-end mt-3 mt-md-0">
+        <div class="btn-group">
+            {% if subscription.status == "ACTIVE" %}
+                <form method="post" action="{% url 'subscriptions:pause' subscription.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-warning btn-sm" onclick="return confirm('Pause this subscription?');">Pause</button>
+                </form>
+                <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline ms-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="immediate" value="false">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Schedule cancellation at period end?');">Cancel at Period End</button>
+                </form>
+            {% elif subscription.status == "PAUSED" %}
+                <form method="post" action="{% url 'subscriptions:resume' subscription.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-success btn-sm" onclick="return confirm('Resume this subscription?');">Resume</button>
+                </form>
+                <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline ms-1">
+                    {% csrf_token %}
+                    <input type="hidden" name="immediate" value="true">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancel this subscription immediately?');">Cancel Immediately</button>
+                </form>
+            {% elif subscription.status == "TRIALING" %}
+                <form method="post" action="{% url 'subscriptions:cancel' subscription.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="immediate" value="true">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Cancel this trial subscription?');">Cancel Trial</button>
+                </form>
+            {% endif %}
+        </div>
+        <a href="{% url 'subscriptions:list' %}" class="btn btn-link btn-sm text-decoration-none ms-2">&larr; Back to Subscriptions</a>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Subscription Details -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Plan & Billing Cycle</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="text-muted small">Customer</label>
+                    <div class="fw-semibold">
+                        <a href="{% url 'customers:detail' subscription.customer.pk %}" class="text-decoration-none">
+                            {{ subscription.customer.name }}
+                        </a>
+                    </div>
+                    <small class="text-muted">{{ subscription.customer.email }}</small>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Plan Code / Offering</label>
+                    <div><span class="badge bg-light text-dark border">{{ subscription.plan.code }}</span> &bull; {{ subscription.plan.name }}</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Billing Frequency</label>
+                    <div>{{ subscription.plan.get_billing_interval_display }} ({{ subscription.plan.currency }})</div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Current Period</label>
+                    <div>{{ subscription.current_period_start|date:"M d, Y H:i" }} &ndash; {{ subscription.current_period_end|date:"M d, Y H:i" }}</div>
+                </div>
+                {% if subscription.paused_at %}
+                    <div class="mb-3">
+                        <label class="text-muted small">Paused Timestamp</label>
+                        <div class="text-warning fw-semibold">{{ subscription.paused_at|date:"M d, Y H:i" }}</div>
+                    </div>
+                {% endif %}
+                <div class="mb-0">
+                    <label class="text-muted small">Agreement Created</label>
+                    <div class="small text-muted">{{ subscription.created_at|date:"M d, Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Financial Breakdown -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0">Pricing & Reductions</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span>Base Plan Price ({{ subscription.plan.name }})</span>
+                        <span class="fw-semibold">{{ subscription.plan.currency }} {{ subscription.plan.price }}</span>
+                    </li>
+                    {% if items %}
+                        {% for item in items %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                <span>{{ item.variant.name|default:"Add-on" }} &times; {{ item.quantity }}</span>
+                                <span>{{ subscription.plan.currency }} {{ item.get_amount }}</span>
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                        <span class="fw-bold">Subtotal</span>
+                        <span class="fw-bold">{{ subscription.plan.currency }} {{ subscription.get_subtotal }}</span>
+                    </li>
+                    {% if subscription.discount %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 text-success">
+                            <span>Promo Discount ({{ subscription.discount.code }})</span>
+                            <span>&minus;{{ subscription.plan.currency }} {{ subscription.get_discount_amount }}</span>
+                        </li>
+                    {% endif %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 fs-5 border-top pt-3">
+                        <span class="fw-bold">Recurring Total</span>
+                        <span class="fw-bold text-primary">{{ subscription.plan.currency }} {{ subscription.get_total }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attached Add-ons & Items -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">Subscription Add-ons & Line Items</h5>
+    </div>
+    <div class="card-body">
+        {% if items %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Item / Variant</th>
+                            <th>SKU</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                            <tr>
+                                <td>{{ item.variant.name|default:"Custom Add-on" }}</td>
+                                <td><code>{{ item.variant.sku|default:"N/A" }}</code></td>
+                                <td>{{ item.quantity }}</td>
+                                <td>{{ subscription.plan.currency }} {{ item.unit_price }}</td>
+                                <td class="text-end fw-semibold">{{ subscription.plan.currency }} {{ item.get_amount }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-muted text-center py-3">
+                No additional add-on items attached to this subscription.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
