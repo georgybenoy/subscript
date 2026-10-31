@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Add Product Variant — Subscript{% endblock %}
+{% block breadcrumb %}
+    <a href="{% url 'products:list' %}">Products</a> <span class="separator">/</span> New Variant
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card-subscript">
+            <div class="card-header">
+                <div>
+                    <h5 class="card-title">Add Product Variant / Add-on SKU</h5>
+                    <small class="text-muted">Define SKU attribute, tier adjustments, and price deltas</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" class="form-subscript">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert-subscript alert-subscript-danger mb-4">
+                            {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.product.id_for_label }}" class="form-label">Parent Product <span class="required-indicator">*</span></label>
+                            {{ form.product }}
+                            {% if form.product.errors %}
+                                <div class="form-error-feedback">{{ form.product.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Variant Name <span class="required-indicator">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="form-error-feedback">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.sku.id_for_label }}" class="form-label">Variant SKU <span class="required-indicator">*</span></label>
+                            {{ form.sku }}
+                            {% if form.sku.errors %}
+                                <div class="form-error-feedback">{{ form.sku.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.value.id_for_label }}" class="form-label">Attribute Value</label>
+                            {{ form.value }}
+                            {% if form.value.errors %}
+                                <div class="form-error-feedback">{{ form.value.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text-subscript">e.g. 50 Seats, Enterprise Edition</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="{{ form.price_adjustment.id_for_label }}" class="form-label">Price Adjustment ($)</label>
+                            {{ form.price_adjustment }}
+                            {% if form.price_adjustment.errors %}
+                                <div class="form-error-feedback">{{ form.price_adjustment.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text-subscript">Delta added to parent product sales price (effective price).</div>
+                        </div>
+                        <div class="col-md-6 d-flex align-items-center pt-4">
+                            <div class="form-check form-switch">
+                                {{ form.is_active }}
+                                <label class="form-check-label text-light ms-2" for="{{ form.is_active.id_for_label }}">Active for billing</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-3 border-top border-secondary border-opacity-25">
+                        <a href="{% url 'products:list' %}" class="btn btn-subscript-ghost">Cancel</a>
+                        <button type="submit" class="btn btn-subscript-primary">
+                            <i class="bi bi-check2"></i> Save Variant
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
