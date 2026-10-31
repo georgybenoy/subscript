@@ -115,6 +115,11 @@
                     <i class="bi bi-receipt me-1"></i> Invoices
                 </button>
             </li>
+            <li class="nav-item">
+                <button class="nav-link bg-transparent text-muted border-0 pb-2" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payments-tab-pane" type="button">
+                    <i class="bi bi-credit-card me-1"></i> Payments
+                </button>
+            </li>
         </ul>
     </div>
     <div class="card-body p-0">
@@ -146,6 +151,38 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="5" class="text-center py-4 text-muted">No subscriptions assigned to this customer yet.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payments Tab -->
+            <div class="tab-pane fade" id="payments-tab-pane">
+                <div class="table-responsive">
+                    <table class="table-subscript">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Date</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th class="text-end">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pay in payments %}
+                                <tr>
+                                    <td><a href="/payments/{{ pay.pk }}/" class="text-primary font-monospace">{{ pay.reference }}</a></td>
+                                    <td>{{ pay.payment_date|date:"M d, Y" }}</td>
+                                    <td><span class="badge bg-secondary bg-opacity-25 text-light">{{ pay.method }}</span></td>
+                                    <td>{% include "partials/_badge.html" with status=pay.status %}</td>
+                                    <td class="text-end font-monospace fw-bold text-success">${{ pay.amount }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No payments recorded for this customer yet.</td>
                                 </tr>
                             {% endfor %}
                         </tbody>

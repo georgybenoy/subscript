@@ -79,9 +79,9 @@ def customer_detail_view(request, pk: int):
 
     context = {
         "customer": customer,
-        "subscriptions": services.get_customer_subscriptions(customer),
-        "invoices": services.get_customer_invoices(customer),
-        "payments": services.get_customer_payments(customer),
+        "subscriptions": services.get_customer_subscriptions(customer, user=request.user),
+        "invoices": services.get_customer_invoices(customer, user=request.user),
+        "payments": services.get_customer_payments(customer, user=request.user),
     }
     return render(request, "customers/customer_detail.html", context)
 

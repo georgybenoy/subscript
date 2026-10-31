@@ -244,16 +244,20 @@ class RBACPermissionsTests(TestCase):
         self.client.login(email=self.admin.email, password=self.password)
         res_admin = self.client.get(reverse("dashboard"))
         self.assertEqual(res_admin.status_code, 200)
-        self.assertContains(res_admin, "User & Role Management")
+        self.assertContains(res_admin, "User Management")
+        self.assertContains(res_admin, "Executive Overview")
 
         # Staff
         self.client.login(email=self.staff.email, password=self.password)
         res_staff = self.client.get(reverse("dashboard"))
         self.assertEqual(res_staff.status_code, 200)
-        self.assertContains(res_staff, "Operational Workspace")
+        self.assertContains(res_staff, "Executive Overview")
+        self.assertNotContains(res_staff, "User Management")
 
         # Customer
         self.client.login(email=self.customer.email, password=self.password)
         res_cust = self.client.get(reverse("dashboard"))
         self.assertEqual(res_cust.status_code, 200)
-        self.assertContains(res_cust, "My Account & Subscriptions")
+        self.assertContains(res_cust, "Your Subscriptions")
+        self.assertNotContains(res_cust, "Recurring Revenue Momentum")
+        self.assertNotContains(res_cust, "User Management")
