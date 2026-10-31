@@ -89,17 +89,32 @@ class EmailAuthenticationForm(forms.Form):
     def clean(self):
         email = self.cleaned_data.get("email", "").strip().lower()
         password = self.cleaned_data.get("password")
+        ip = services.get_client_ip(self.request)
+
+        if email:
+            if services.is_login_throttled(ip, email):
+                raise ValidationError(
+                    "Too many failed login attempts. Your account is temporarily locked for 5 minutes. Please try again later."
+                )
 
         if email and password:
             self.user_cache = authenticate(self.request, username=email, password=password)
             if self.user_cache is None:
+                services.record_failed_login(ip, email)
+                if services.is_login_throttled(ip, email):
+                    raise ValidationError(
+                        "Too many failed login attempts. Your account is temporarily locked for 5 minutes. Please try again later."
+                    )
                 # Check whether account exists but is deactivated
                 existing_user = User.objects.filter(email__iexact=email).first()
                 if existing_user and existing_user.check_password(password) and not existing_user.is_active:
                     raise ValidationError("This account is inactive. Please contact support.")
                 raise ValidationError("Invalid email address or password.")
             elif not self.user_cache.is_active:
+                services.record_failed_login(ip, email)
                 raise ValidationError("This account is inactive. Please contact support.")
+            else:
+                services.reset_failed_logins(ip, email)
 
         return self.cleaned_data
 

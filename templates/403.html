@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Access Denied (403) - Subscript{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 text-center">
+        <div class="display-1 text-danger fw-bold">403</div>
+        <h2 class="h4 mb-3">Access Denied</h2>
+        <p class="text-muted mb-4">
+            You do not have administrative or operational privileges to access this area.
+            If you believe this is an error, please contact your account manager.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">Return to Dashboard</a>
+            <a href="{% url 'customers:list' %}" class="btn btn-outline-secondary">Go to Directory</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

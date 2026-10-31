@@ -158,6 +158,40 @@ def unlink_customer_user(customer: Customer) -> Customer:
     return customer
 
 
+def get_current_customer(user) -> Optional[Customer]:
+    """
+    Returns the linked Customer profile for an authenticated user, or None.
+    """
+    if not (user and user.is_authenticated and user.is_active):
+        return None
+    return getattr(user, "customer_profile", None)
+
+
+def scope_queryset_for_user(qs: QuerySet, user, customer_lookup: str = "customer__user") -> QuerySet:
+    """
+    Reusable queryset scoping for teammate applications exposing customer financial data.
+    - Admin & Staff: full access (returns qs.all())
+    - Customer role: strictly scoped to own user (returns qs.filter(**{customer_lookup: user}))
+    - Unauthenticated / Inactive / Unknown role: returns qs.none()
+
+    Teammate usage conventions:
+    - subscriptions -> scope_queryset_for_user(Subscription.objects.all(), user, "customer__user")
+    - invoices      -> scope_queryset_for_user(Invoice.objects.all(), user, "customer__user")
+    - payments      -> scope_queryset_for_user(Payment.objects.all(), user, "customer__user")
+    """
+    if not (user and user.is_authenticated and user.is_active):
+        return qs.none()
+
+    if getattr(user, "is_admin_role", False) or getattr(user, "is_staff_role", False):
+        return qs.all()
+
+    if getattr(user, "is_customer_role", False):
+        return qs.filter(**{customer_lookup: user})
+
+    return qs.none()
+
+
+
 # ==============================================================================
 # INTEGRATION HELPERS (LAZY LOADING FOR TEAMMATES' APPS)
 # ==============================================================================

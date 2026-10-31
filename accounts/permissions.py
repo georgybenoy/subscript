@@ -24,13 +24,17 @@ Rules:
 - Authenticated users with insufficient roles receive HTTP 403 (PermissionDenied)
 """
 
+import logging
 from functools import wraps
 from django.conf import settings
 from django.contrib.auth.mixins import AccessMixin
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect
 from django.urls import NoReverseMatch, reverse
+from customers.services import get_current_customer
 from .models import User
+
+logger = logging.getLogger("accounts")
 
 
 def _is_authenticated_and_active(user) -> bool:
@@ -67,6 +71,9 @@ def role_required(*roles):
                 return redirect(get_login_redirect_url(path))
 
             if request.user.role not in allowed_roles:
+                logger.warning(
+                    f"Permission denied for user '{request.user.email}' (role={request.user.role}) accessing {request.path}"
+                )
                 raise PermissionDenied("You do not have permission to access this resource.")
 
             return view_func(request, *args, **kwargs)
@@ -108,6 +115,9 @@ class RoleRequiredMixin(AccessMixin):
 
         allowed = self.get_allowed_roles()
         if allowed and request.user.role not in allowed:
+            logger.warning(
+                f"Permission denied for user '{request.user.email}' (role={request.user.role}) accessing CBV {request.path}"
+            )
             raise PermissionDenied("You do not have permission to access this resource.")
 
         return super().dispatch(request, *args, **kwargs)

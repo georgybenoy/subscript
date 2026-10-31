@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found (404) - Subscript{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-6 text-center">
+        <div class="display-1 text-primary fw-bold">404</div>
+        <h2 class="h4 mb-3">Page Not Found</h2>
+        <p class="text-muted mb-4">
+            The resource you requested does not exist or you do not have permission to view it.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">Return to Dashboard</a>
+            <a href="{% url 'customers:list' %}" class="btn btn-outline-secondary">Go to Directory</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

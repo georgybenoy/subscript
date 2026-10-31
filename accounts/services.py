@@ -1,7 +1,71 @@
+import logging
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from customers.services import create_customer_for_user
 from .models import User
+
+logger = logging.getLogger("accounts")
+
+MAX_LOGIN_FAILURES = 5
+LOCKOUT_TIME_SECONDS = 300  # 5 minutes
+
+
+# ==============================================================================
+# LOGIN THROTTLING & SECURITY HELPERS
+# ==============================================================================
+def get_client_ip(request) -> str:
+    """Extract client IP address from HTTP request."""
+    if not request:
+        return "127.0.0.1"
+    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded_for:
+        return x_forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "127.0.0.1")
+
+
+def get_throttle_cache_keys(ip: str, email: str) -> tuple[str, str]:
+    clean_email = email.strip().lower()
+    fail_key = f"login_fail_count:{ip}:{clean_email}"
+    lock_key = f"login_locked:{ip}:{clean_email}"
+    return fail_key, lock_key
+
+
+def is_login_throttled(ip: str, email: str) -> bool:
+    """Check if login is currently locked due to too many failed attempts."""
+    _, lock_key = get_throttle_cache_keys(ip, email)
+    return bool(cache.get(lock_key))
+
+
+def record_failed_login(ip: str, email: str) -> int:
+    """
+    Increments failed login attempts for this IP + email pair.
+    Locks login for 5 minutes when failures reach MAX_LOGIN_FAILURES.
+    Returns current failure count.
+    """
+    fail_key, lock_key = get_throttle_cache_keys(ip, email)
+    count = cache.get(fail_key, 0) + 1
+    cache.set(fail_key, count, timeout=LOCKOUT_TIME_SECONDS)
+
+    logger.warning(
+        f"Failed login attempt ({count}/{MAX_LOGIN_FAILURES}) for email '{email}' from IP {ip}"
+    )
+
+    if count >= MAX_LOGIN_FAILURES:
+        cache.set(lock_key, True, timeout=LOCKOUT_TIME_SECONDS)
+        logger.warning(
+            f"Login lockout triggered (5 minutes) for email '{email}' from IP {ip}"
+        )
+
+    return count
+
+
+def reset_failed_logins(ip: str, email: str):
+    """Resets failed login count and lockout status upon successful authentication."""
+    fail_key, lock_key = get_throttle_cache_keys(ip, email)
+    cache.delete(fail_key)
+    cache.delete(lock_key)
+
 
 
 @transaction.atomic
