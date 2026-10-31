@@ -9,4 +9,8 @@ urlpatterns = [
     path("invoices/", views.invoice_list_view, name="invoice_list_invoices"),
     path("<int:pk>/", views.invoice_detail_view, name="invoice_detail"),
     path("invoices/<int:pk>/", views.invoice_detail_view, name="invoice_detail_invoices"),
+
+    # Actions (POST-only)
+    path("<int:pk>/confirm/", views.confirm_invoice_view, name="invoice_confirm"),
+    path("<int:pk>/cancel/", views.cancel_invoice_view, name="invoice_cancel"),
 ]

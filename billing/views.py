@@ -8,16 +8,21 @@ Handles:
 - ReportLab PDF export
 """
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import HttpRequest, HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import render, redirect
 from django.views.decorators.http import require_POST
+from accounts.permissions import staff_or_admin_required
 from .models import Invoice
 from .services import (
     scope_invoices_for_user,
     get_invoice_for_user_or_404,
     filter_invoices,
+    confirm_invoice,
+    cancel_invoice,
 )
 
 
@@ -74,3 +79,37 @@ def invoice_detail_view(request: HttpRequest, pk: int) -> HttpResponse:
         "invoice": invoice,
     }
     return render(request, "invoices/detail.html", context)
+
+
+@login_required
+@staff_or_admin_required
+@require_POST
+def confirm_invoice_view(request: HttpRequest, pk: int) -> HttpResponse:
+    """
+    Transitions invoice from DRAFT to CONFIRMED and commits discount usage.
+    POST-only, Admin/Staff only.
+    """
+    invoice = get_invoice_for_user_or_404(request.user, pk)
+    try:
+        confirm_invoice(invoice)
+        messages.success(request, f"Invoice {invoice.invoice_number} successfully confirmed.")
+    except ValidationError as e:
+        messages.error(request, str(e.message if hasattr(e, "message") else e))
+    return redirect("billing:invoice_detail", pk=pk)
+
+
+@login_required
+@staff_or_admin_required
+@require_POST
+def cancel_invoice_view(request: HttpRequest, pk: int) -> HttpResponse:
+    """
+    Cancels an invoice with zero payments.
+    POST-only, Admin/Staff only.
+    """
+    invoice = get_invoice_for_user_or_404(request.user, pk)
+    try:
+        cancel_invoice(invoice)
+        messages.success(request, f"Invoice {invoice.invoice_number} successfully cancelled.")
+    except ValidationError as e:
+        messages.error(request, str(e.message if hasattr(e, "message") else e))
+    return redirect("billing:invoice_detail", pk=pk)

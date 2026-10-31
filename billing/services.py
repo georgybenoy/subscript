@@ -18,7 +18,11 @@ from django.db.models import Q, QuerySet
 from django.http import Http404
 from django.utils import timezone
 from customers.services import scope_queryset_for_user
-from .integrations import calculate_next_billing_date, resolve_discount
+from .integrations import (
+    calculate_next_billing_date,
+    resolve_discount,
+    commit_discount_usage,
+)
 from .models import Invoice, InvoiceItem, InvoiceStatus
 from .money import (
     quantize_money,
@@ -69,6 +73,61 @@ def calculate_invoice_totals(invoice: Invoice) -> Invoice:
 
     invoice.save(update_fields=["subtotal", "tax_amount", "discount_amount", "total_amount", "updated_at"])
     return invoice
+
+
+def confirm_invoice(invoice: Invoice) -> Invoice:
+    """
+    Transitions an invoice from DRAFT to CONFIRMED.
+    Commits applied discount usage atomically.
+    Makes totals and line items immutable.
+    """
+    if invoice.status == InvoiceStatus.CONFIRMED:
+        return invoice
+
+    if invoice.status != InvoiceStatus.DRAFT:
+        raise ValidationError(
+            f"Only DRAFT invoices can be confirmed. Current status: {invoice.status}."
+        )
+
+    with transaction.atomic():
+        # Recalculate totals to guarantee item-level reconciliation
+        calculate_invoice_totals(invoice)
+
+        # Commit discount redemption usage ONCE upon confirmation
+        if invoice.applied_discount:
+            commit_discount_usage(invoice.applied_discount)
+
+        invoice.status = InvoiceStatus.CONFIRMED
+        invoice.save(update_fields=["status", "updated_at"])
+        return invoice
+
+
+def cancel_invoice(invoice: Invoice) -> Invoice:
+    """
+    Cancels an invoice.
+    Permitted only from DRAFT or CONFIRMED with zero payments.
+    PAID or partially paid invoices cannot be cancelled (no reversal workflow in MVP).
+    """
+    if invoice.status == InvoiceStatus.CANCELLED:
+        return invoice
+
+    if invoice.status == InvoiceStatus.PAID:
+        raise ValidationError("PAID invoices cannot be cancelled. No reversal workflow in MVP.")
+
+    paid_sum = invoice.paid_amount
+    if paid_sum > Decimal("0.00") or invoice.payments.exists():
+        raise ValidationError(
+            f"Cannot cancel invoice with recorded payments (${paid_sum}). "
+            "Financial audit records cannot be voided once partially settled."
+        )
+
+    if invoice.status not in [InvoiceStatus.DRAFT, InvoiceStatus.CONFIRMED]:
+        raise ValidationError(f"Cannot cancel invoice in status '{invoice.status}'.")
+
+    with transaction.atomic():
+        invoice.status = InvoiceStatus.CANCELLED
+        invoice.save(update_fields=["status", "updated_at"])
+        return invoice
 
 
 def scope_invoices_for_user(user, qs: Optional[QuerySet[Invoice]] = None) -> QuerySet[Invoice]:
