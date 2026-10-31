@@ -1,4 +1,4 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from customers.services import create_customer_for_user
 from .models import User
@@ -31,6 +31,38 @@ def register_customer(email: str, password: str, first_name: str = "", last_name
     return user
 
 
+@transaction.atomic
+def create_staff_user(
+    acting_admin: User,
+    email: str,
+    password: str,
+    first_name: str = "",
+    last_name: str = "",
+) -> User:
+    """
+    Creates a new STAFF user. Can only be invoked by an active ADMIN user.
+    Role is ALWAYS forced to STAFF.
+    """
+    if not (acting_admin and acting_admin.is_authenticated and acting_admin.is_admin_role):
+        raise PermissionDenied("Only administrators can create staff users.")
+
+    email_clean = email.strip().lower()
+
+    if User.objects.filter(email__iexact=email_clean).exists():
+        raise ValidationError("A user with this email address already exists.")
+
+    user = User.objects.create_user(
+        email=email_clean,
+        password=password,
+        first_name=first_name.strip(),
+        last_name=last_name.strip(),
+        role=User.Role.STAFF,
+        is_staff=True,
+        is_superuser=False,
+    )
+    return user
+
+
 def update_user_profile(user: User, first_name: str, last_name: str) -> User:
     """
     Updates basic profile attributes (first_name, last_name) for a user.
@@ -48,3 +80,24 @@ def update_user_profile(user: User, first_name: str, last_name: str) -> User:
             user.customer_profile.save(update_fields=["name", "updated_at"])
 
     return user
+
+
+def toggle_user_active_status(acting_admin: User, target_user_id: int) -> User:
+    """
+    Toggles is_active status of target user.
+    Admin cannot deactivate themselves.
+    """
+    if not (acting_admin and acting_admin.is_authenticated and acting_admin.is_admin_role):
+        raise PermissionDenied("Only administrators can modify user active status.")
+
+    try:
+        target_user = User.objects.get(pk=target_user_id)
+    except User.DoesNotExist:
+        raise ValidationError("User not found.")
+
+    if target_user.pk == acting_admin.pk:
+        raise ValidationError("Administrators cannot deactivate their own account.")
+
+    target_user.is_active = not target_user.is_active
+    target_user.save(update_fields=["is_active", "updated_at"])
+    return target_user

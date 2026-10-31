@@ -107,6 +107,58 @@ class EmailAuthenticationForm(forms.Form):
         return self.user_cache
 
 
+class StaffCreationForm(forms.ModelForm):
+    """
+    Form for administrators to provision new staff members.
+    Forces role to STAFF.
+    """
+
+    password = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput(attrs={"class": "form-control", "placeholder": "Assign staff password"}),
+    )
+
+    class Meta:
+        model = User
+        fields = ("email", "first_name", "last_name")
+        widgets = {
+            "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "staff@subscript.local"}),
+            "first_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "First name"}),
+            "last_name": forms.TextInput(attrs={"class": "form-control", "placeholder": "Last name"}),
+        }
+
+    def clean_email(self):
+        email = self.cleaned_data.get("email", "").strip().lower()
+        if not email:
+            raise ValidationError("Email is required.")
+        if User.objects.filter(email__iexact=email).exists():
+            raise ValidationError("A user with this email address already exists.")
+        return email
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        if password:
+            email = cleaned_data.get("email")
+            temp_user = User(email=email) if email else None
+            validate_password(password, user=temp_user)
+        return cleaned_data
+
+    def save(self, acting_admin: User):
+        email = self.cleaned_data["email"]
+        password = self.cleaned_data["password"]
+        first_name = self.cleaned_data.get("first_name", "")
+        last_name = self.cleaned_data.get("last_name", "")
+
+        return services.create_staff_user(
+            acting_admin=acting_admin,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+        )
+
+
 class ProfileForm(forms.ModelForm):
     """
     Profile update form for users to manage their personal details.

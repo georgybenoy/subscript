@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Subscript{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="p-4 bg-white rounded shadow-sm border">
+            <h2 class="h4 mb-1">Welcome back, {{ user.first_name|default:user.email }}!</h2>
+            <p class="text-muted mb-0">Role: <span class="badge bg-primary">{{ user.get_role_display }}</span> | Status: <span class="text-success fw-semibold">Active</span></p>
+        </div>
+    </div>
+</div>
+
+{% if user.is_admin_role %}
+    <!-- Admin Context -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-start border-danger border-4">
+                <div class="card-body">
+                    <h5 class="card-title">User & Role Management</h5>
+                    <p class="card-text text-muted">Manage system users, deactivate compromised accounts, and audit roles.</p>
+                    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-danger btn-sm">Manage Users</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-start border-warning border-4">
+                <div class="card-body">
+                    <h5 class="card-title">Staff Administration</h5>
+                    <p class="card-text text-muted">Provision operational staff accounts with restricted platform permissions.</p>
+                    <a href="{% url 'accounts:staff_create' %}" class="btn btn-outline-warning text-dark btn-sm">Provision Staff</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-start border-primary border-4">
+                <div class="card-body">
+                    <h5 class="card-title">Customer Registry</h5>
+                    <p class="card-text text-muted">Inspect customer profiles, tax IDs, and billing contacts.</p>
+                    <a href="{% url 'customers:list' %}" class="btn btn-outline-primary btn-sm">View Customers</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif user.is_staff_role %}
+    <!-- Staff Context -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-start border-info border-4">
+                <div class="card-body">
+                    <h5 class="card-title">Operational Workspace</h5>
+                    <p class="card-text text-muted">Operational access to subscriptions, customer profiles, and billing logs.</p>
+                    <a href="{% url 'customers:list' %}" class="btn btn-outline-info text-dark btn-sm">Customer Database</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-start border-secondary border-4">
+                <div class="card-body">
+                    <h5 class="card-title">Account Profile</h5>
+                    <p class="card-text text-muted">Update your operational contact details.</p>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary btn-sm">Edit Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% else %}
+    <!-- Customer Context -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-start border-success border-4">
+                <div class="card-body">
+                    <h5 class="card-title">My Account & Subscriptions</h5>
+                    <p class="card-text text-muted">View your current subscription status, plans, and invoices.</p>
+                    <div class="alert alert-info py-2 small mb-3">No active subscriptions yet. Browse plans when available.</div>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-outline-success btn-sm">Manage Profile</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm border-start border-primary border-4">
+                <div class="card-body">
+                    <h5 class="card-title">Billing & Invoices</h5>
+                    <p class="card-text text-muted">Download payment receipts and review billing statements.</p>
+                    <p class="text-muted small">Invoices will appear here once generated.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,17 +1,17 @@
-from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 
+@login_required
 def dashboard_view(request):
     """
-    Temporary simple dashboard view.
-    To be styled/expanded by Member 2 with Bootstrap 5 / HTMX templates.
+    Role-aware dashboard view at root ("/").
+    Shows context based strictly on user role (Admin, Staff, Customer).
     """
-    return HttpResponse(
-        "<h1>Subscript Dashboard</h1>"
-        "<p>Subscription Management & Recurring Billing Platform</p>"
-        "<ul>"
-        '<li><a href="/accounts/login/">Login</a></li>'
-        '<li><a href="/customers/">Customers</a></li>'
-        '<li><a href="/admin/">Admin</a></li>'
-        "</ul>"
-    )
+    context = {
+        "role": request.user.role,
+        "is_admin": request.user.is_admin_role,
+        "is_staff": request.user.is_staff_role,
+        "is_customer": request.user.is_customer_role,
+    }
+    return render(request, "dashboard.html", context)
